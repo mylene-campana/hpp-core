@@ -61,8 +61,8 @@ namespace hpp {
 	PathOptimizer (problem), cost_ (), robot_ (problem.robot ()),
 	configSize_ (robot_->configSize ()), robotNumberDofs_
 	(robot_->numberDof ()),	robotNbNonLockedDofs_ (robot_->numberDof ()),
-	fSize_ (1),
-	initial_ (), end_ (), epsilon_ (1e-5), iterMax_ (30), alphaInit_ (0.1),
+	fSize_ (6),
+	initial_ (), end_ (), epsilon_ (1e-3), iterMax_ (30), alphaInit_ (0.25),
 	alphaMax_ (1.)
       {
 	distance_ = HPP_DYNAMIC_PTR_CAST (WeighedDistance, problem.distance ());
@@ -200,7 +200,6 @@ namespace hpp {
 	    Hz_ = V0_.transpose () * H_ * V0_;
 	    gz_ = - V0_.transpose () * (rgrad_.transpose () + H_ * p0_);
 	    Jacobi_t svd2 (Hz_, Eigen::ComputeThinU | Eigen::ComputeFullV);
-	    //svd2.setThreshold (1e-6);
 	    rank = svd2.rank ();
 	    hppDout (info, "Hz_ singular values = " <<
 		     svd2.singularValues ().transpose ());
