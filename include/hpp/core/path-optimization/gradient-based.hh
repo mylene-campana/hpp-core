@@ -124,7 +124,7 @@ namespace hpp {
 	void integrate (vectorIn_t x0, vectorIn_t step, vectorOut_t x1) const;
 
 	/// Compute iteration of optimization program
-	vector_t computeIterate (vectorIn_t x) const;
+	vector_t computeIterate () const;
 
 	/// Display path waypoints in log file
 	void displayPath (vectorIn_t x, std::string
@@ -155,9 +155,9 @@ namespace hpp {
 	///
 	/// Update right hand side with current path so that latest valid path
 	/// perfectly satisfies constraints.
-	void updateRightHandSide (const CollisionConstraintsResults_t&
-				  collisionConstraints,
-				  const PathVectorPtr_t& path) const;
+	void updateReference (CollisionConstraintsResults_t&
+			      collisionConstraints,
+			      const PathVectorPtr_t& path);
 
 	/// Get constraints of problem and update local jacobian J_
 	bool getProblemConstraints ();
@@ -192,6 +192,7 @@ namespace hpp {
 	std::size_t iterMax_;
 	value_type alphaInit_; // .1, .2, .4
 	value_type alphaMax_;
+	mutable value_type normgradV0_;
       }; // GradientBased
     } // namespace pathOptimization
   }  // namespace core

@@ -45,6 +45,9 @@
 #include <hpp/constraints/relative-transformation.hh>
 #include "path-optimization/collision-constraints-result.hh"
 
+// For debug
+#include <hpp/core/problem-solver.hh>
+
 namespace hpp {
   namespace core {
     namespace pathOptimization {
@@ -62,7 +65,7 @@ namespace hpp {
 	configSize_ (robot_->configSize ()), robotNumberDofs_
 	(robot_->numberDof ()),	robotNbNonLockedDofs_ (robot_->numberDof ()),
 	fSize_ (6),
-	initial_ (), end_ (), epsilon_ (1e-3), iterMax_ (30), alphaInit_ (0.25),
+	initial_ (), end_ (), epsilon_ (1e-3), iterMax_ (30), alphaInit_ (0.2),
 	alphaMax_ (1.)
       {
 	distance_ = HPP_DYNAMIC_PTR_CAST (WeighedDistance, problem.distance ());
@@ -143,7 +146,6 @@ namespace hpp {
 	hppDout (info, "size of x = " << cost_->inputSize ());
 	numberDofs_ = cost_->inputDerivativeSize ();
 	stepNormal_.resize (numberDofs_);
-	p_.resize (numberDofs_);
 	// Get problem constraints and locked degrees of freedom
 	initializeProblemConstraints ();
 
@@ -161,7 +163,7 @@ namespace hpp {
 	alpha_ = alphaInit_;
       }
 
-      vector_t GradientBased::computeIterate (vectorIn_t) const
+      vector_t GradientBased::computeIterate () const
       {
 	if (J_.rows () == 0) {
 	  // no constraints
@@ -191,10 +193,8 @@ namespace hpp {
 	  size_type rank = svd.rank();
 	  hppDout (info, "J_ singular values = " <<
 		   svd.singularValues ().transpose ());
-	  hppDout (info, "Jrows = " << J_.rows ());
 	  hppDout (info, "rank(J) = " << rank);
 	  V0_ = svd.matrixV ().rightCols (numberDofs_-rank);
-	  hppDout (info, "rhs_ - value_ = " << rhs_ - value_);
 	  p0_ = svd.solve (rhs_ - value_);
 	  if (V0_.cols () != 0) {
 	    Hz_ = V0_.transpose () * H_ * V0_;
@@ -204,8 +204,6 @@ namespace hpp {
 	    hppDout (info, "Hz_ singular values = " <<
 		     svd2.singularValues ().transpose ());
 	    hppDout (info, "rank(Hz_) = " << rank);
-	    vector_t z (svd2.solve (gz_));
-	    hppDout (info, "Hz_ * z - gz_=" << (Hz_ * z - gz_).transpose ());
 	    p_ = p0_ + V0_ * svd2.solve (gz_);
 	    hppDout (info, "constraint satisfaction: " <<
 		     (J_*p_ - (rhs_ - value_)).squaredNorm ());
@@ -261,7 +259,7 @@ namespace hpp {
 	pathToVector (path, x1);
 	vector_t x0 = x1;
 	Hinverse_ = H_.inverse ();
-	hppDout (info, "Hessian = " << H_);
+	hppDout (info, "inverse Hessian = " << Hinverse_);
 
 	/* Fill jacobian J_ and Jf_ with constraints FROM Problem */
 	cost_->jacobian (grad, x1);
@@ -270,50 +268,87 @@ namespace hpp {
 
 	PathVectorPtr_t path0 (path);
 	CollisionConstraintsResults_t collisionConstraints;
+	size_type pathId = 0;
+	if (ProblemSolver::latest ()) {
+	  pathId = ProblemSolver::latest ()->paths ().size ();
+	}
 	if (!minimumReached) {
 	  do {
-	    vector_t s = computeIterate (x0);
+	    // Compute value and Jacobian in x0
+	    updateProblemConstraints (x0);
+	    vector_t s = computeIterate ();
 	    hppDout (info, "alpha_ = " << alpha_);
-	    value_type norm_s (s.norm ());
-	    minimumReached = (norm_s < epsilon_ || alpha_ == 1.);
-	    hppDout (info, "norm of s: " << norm_s);
+	    minimumReached = (s.norm () < epsilon_ || alpha_ == 1.);
+	    //minimumReached = s.norm () < epsilon_;
+	    hppDout (info, "norm of s: " << s.norm ());
 	    hppDout (info, "s: " << s.transpose ());
-	    if (norm_s == 0) return path0;
 	    integrate (x0, s, x1);
 	    hppDout (info, "x1=" << x1.transpose ());
 	    PathVectorPtr_t path1 = PathVector::create (configSize_,
 							robotNumberDofs_);
 	    vectorToPath (x1, path1);
-	    bool isPathValid = validatePath (pathValidation, path1, reports);
-	    // if new path is in collision, we add some constraints
-	    if (!isPathValid) {
-	      if (alpha_ != 1.) {
-		for (Reports_t::const_iterator it = reports.begin ();
-		     it != reports.end (); ++it) {
-		  CollisionConstraintsResult ccr (robot_, path0, path1,
-						  *it, J_.rows (),
-						  robotNbNonLockedDofs_);
-		  // Compute J_
-		  addCollisionConstraint (ccr, path0);
-		  collisionConstraints.push_back (ccr);
-		  hppDout (info, "Number of collision constraints: "
-			   << collisionConstraints.size ());
-		  // When adding a new constraint, try first minimum under this
-		  // constraint. If this latter minimum is in collision,
-		  // re-initialize alpha_ to alphaInit_.
-		  alpha_ = 1.;
-		}
-	      } else {
-		alpha_ = alphaInit_;
+	    if (ProblemSolver::latest ()) {
+	      hppDout (info, "applied iteration to lastest valid path:"
+		       " path id = " << pathId);
+	      ProblemSolver::latest ()->addPath (path1);
+	      ++pathId;
+	    }
+
+	    // Solve problem constraints and linearize collision constraints
+	    // around new x1.
+	    if (!solveConstraints (x1, path1, collisionConstraints)) {
+	      if (ProblemSolver::latest ()) {
+		hppDout (info, "failed to apply constraints: path id = "
+			 << pathId);
+		ProblemSolver::latest ()->addPath (path1);
+		++pathId;
 	      }
-	      noCollision = false;
-	    } else { // path valid
-	      rowvector_t rgrad0 (rgrad_);
-	      x0 = x1;
-	      path0 = path1;
-	      cost_->jacobian (grad, x0);
-	      compressVector (grad.transpose (), rgrad_.transpose ());
-	      noCollision = true;
+	      alpha_ *= .5;
+	    } else { // (!solveConstraints (x1, path1, collisionConstraints))
+	      hppDout (info, "x1=" << x1.transpose ());
+	      if (ProblemSolver::latest ()) {
+		hppDout (info, "successfully applied constraints: path id = "
+			 << pathId);
+		ProblemSolver::latest ()->addPath (path1);
+		++pathId;
+	      }
+	      bool isPathValid = validatePath (pathValidation, path1, reports);
+	      // if new path is in collision and alpha != 1,
+	      // we add some constraints
+	      if (!isPathValid) {
+		if (alpha_ != 1.) {
+		  for (Reports_t::const_iterator it = reports.begin ();
+		       it != reports.end (); ++it) {
+		    CollisionConstraintsResult ccr (robot_, path0, path1,
+						    *it, J_.rows (),
+						    robotNbNonLockedDofs_);
+		    // Compute J_
+		    addCollisionConstraint (ccr, path0);
+		    collisionConstraints.push_back (ccr);
+		    hppDout (info, "Number of collision constraints: "
+			     << collisionConstraints.size ());
+		  }
+		}
+		// When adding a new constraint, try first minimum under this
+		// constraint. If this latter minimum is in collision,
+		// re-initialize alpha_ to alphaInit_.
+		if (alpha_ == 1.)
+		  alpha_ = alphaInit_;
+		else
+		  alpha_ = 1.;
+		//alpha_ = alphaInit_;
+		noCollision = false;
+	      } else { // path valid
+		x0 = x1;
+		path0 = path1;
+		hppDout (info, "latest valid path: " << pathId - 1);
+		cost_->jacobian (grad, x0);
+		compressVector (grad.transpose (), rgrad_.transpose ());
+		updateReference (collisionConstraints, path0);
+		assert (solveConstraints (x0, path0, collisionConstraints));
+		noCollision = true;
+		alpha_ = .5*(1 + alpha_);
+	      }
 	    }
 	  } while (!(noCollision && minimumReached) && (!interrupt_));
 	} // while (!minimumReached)
@@ -323,7 +358,6 @@ namespace hpp {
       void GradientBased::integrate (vectorIn_t x0, vectorIn_t step,
 				     vectorOut_t x1) const
       {
-	assert (x0.size () == x1.size ());
 	size_type indexConfig = 0;
 	size_type indexVelocity = 0;
 	// uncompress step
@@ -336,7 +370,6 @@ namespace hpp {
 	  indexConfig += configSize_;
 	  indexVelocity += robotNumberDofs_;
 	}
-	assert (indexConfig == x0.size ());
 	assert (indexVelocity == stepNormal_.size ());
       }
 
@@ -355,7 +388,12 @@ namespace hpp {
 	  // Apply problem constraints to each waypoint.
 	  size_type sizeConstraint = configProjector->rightHandSide ().size ();
 	  rows = sizeConstraint * nbWaypoints_;
-	  rhs_.resize (rows); rhs_.setZero ();
+	  rhs_.resize (rows);
+	  // Fill right hand side
+	  for (size_type i=0; i<nbWaypoints_; ++i) {
+	    rhs_.segment (i*sizeConstraint, sizeConstraint) =
+	      configProjector->rightHandSide ();
+	  }
 	}
 	value_.resize (rows);
 	J_.resize (rows, numberDofs_); J_.setZero ();
@@ -400,8 +438,8 @@ namespace hpp {
       ///       the user that there is no collision
       ///
       bool GradientBased::constraintsSatisfied
-      (vectorOut_t& x, PathVectorPtr_t&,
-       CollisionConstraintsResults_t&)
+      (vectorOut_t& x, PathVectorPtr_t& path,
+       CollisionConstraintsResults_t& collisionConstraints)
       {
 	bool satisfied = true;
 	if (problem ().constraints ()) {
@@ -411,6 +449,15 @@ namespace hpp {
 	      satisfied = false;
 	    }
 	  }
+	}
+	path = PathVector::create (configSize_, robotNumberDofs_);
+	vectorToPath (x, path);
+	// Check that collision constraints are within bounds, if not
+	// linearize around new value.
+	for (CollisionConstraintsResults_t::iterator it =
+	       collisionConstraints.begin (); it != collisionConstraints.end ();
+	     ++it) {
+	  if (!it->satisfied (path)) satisfied = false;
 	}
 	return satisfied;
       }
@@ -467,23 +514,24 @@ namespace hpp {
 	const
       {
 	size_type Jrows = J_.rows ();
+	hppDout (info, "Jrows = " << Jrows);
 	J_.conservativeResize (Jrows + fSize_, J_.cols ());
 	J_.middleRows (ccr.rowInJacobian (), fSize_).setZero ();
 	value_.conservativeResize (Jrows + fSize_);
 	value_.segment (ccr.rowInJacobian (), fSize_).setZero ();
 	rhs_.conservativeResize (Jrows + fSize_);
-	rhs_ [ccr.rowInJacobian ()] = 0;
+	rhs_.segment (ccr.rowInJacobian (), fSize_).setZero ();
 	ccr.linearize (path, J_, value_);
       }
 
-      void GradientBased::updateRightHandSide
-      (const CollisionConstraintsResults_t& collisionConstraints,
-       const PathVectorPtr_t& path) const
+      void GradientBased::updateReference
+      (CollisionConstraintsResults_t& collisionConstraints,
+       const PathVectorPtr_t& path)
       {
-	for (CollisionConstraintsResults_t::const_iterator it =
+	for (CollisionConstraintsResults_t::iterator it =
 	       collisionConstraints.begin (); it != collisionConstraints.end ();
 	     ++it) {
-	  it->updateRightHandSide (path, rhs_);
+	  it->updateReference (path, rhs_);
 	}
 
       }
