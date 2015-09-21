@@ -75,10 +75,13 @@ namespace hpp {
 
     PathVectorPtr_t PathPlanner::solve ()
     {
+      //srand(time(NULL)); // change seed
       interrupt_ = false;
       bool solved = false;
       startSolve ();
-      tryDirectPath ();
+      solved = roadmap_->pathExists (); // look if path in roadmap
+      if (!solved )
+	tryDirectPath ();
       solved = roadmap_->pathExists ();
       if (solved ) {
 	hppDout (info, "tryDirectPath succeeded");
