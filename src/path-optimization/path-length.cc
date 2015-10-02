@@ -85,6 +85,14 @@ namespace hpp {
 	hppDout (info, "computed lambda_ = " << lambda_.transpose ());
       }
 
+      void PathLength::setLambda (const vector_t& lambda) const
+      {
+	assert (lambda.size () == lambda.size ());
+	for (std::size_t i=0; i < lambda_.size (); ++i) {
+	  lambda_ [i] = lambda [i];
+	}
+      }
+
       void PathLength::impl_compute (vectorOut_t result,
 				     vectorIn_t argument) const
       {

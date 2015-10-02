@@ -90,7 +90,11 @@ namespace hpp {
 	   M2 = joint2->currentTransformation ();
 	   M1 = joint1->currentTransformation ();
 	   // Position of x2 in local frame of joint1
+	   vector3_t x1_R0 = M1.transform (x1_J1);
+	   vector3_t x2_R0 = M2.transform (x2_J2);
 	   vector3_t x2_J1 (inverse (M1).transform (M2.transform (x2_J2)));
+	   hppDout (info, "x1 in R0 = " << x1_R0);
+	   hppDout (info, "x2 in R0 = " << x2_R0);
 	   hppDout (info, "x1 in J1 = " << x1_J1);
 	   hppDout (info, "x2 in J1 = " << x2_J1);
 	   eigen::vector3_t u; model::toEigen (x2_J1 - x1_J1, u);
@@ -110,8 +114,8 @@ namespace hpp {
 	   // position of x1 in global frame
 	   vector3_t x1_J2 (M1.transform (x1_J1));
 	   hppDout (info, "x1 in J2 = " << x1_J2);
+	   hppDout (info, "x2 in J2 = " << x2_J2);
 	   eigen::vector3_t u; model::toEigen (x1_J2 - x2_J2, u);
-
 	   DifferentiableFunctionPtr_t f = constraints::Position::create
 	     ("", robot_, joint1, x1_J1, x2_J2);
 	   matrix_t Jpos (f->outputSize (), f->inputDerivativeSize ());
@@ -183,8 +187,7 @@ namespace hpp {
 	    value_type t_local_new =
 	      prevLocalPath->length () * posAlongLocalPath_;
 	    qFree_ = (*prevLocalPath) (t_local_new, success);
-	    hppDout (info, "qFree_ = "
-		     << displayConfig (qFree_));
+	    hppDout (info, "qFree_ = " << displayConfig (qFree_));
 
 	    f_ = CollisionConstraint::create (robot_, qFree_, qColl,
 					      object1_, object2_);

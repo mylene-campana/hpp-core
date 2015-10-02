@@ -75,14 +75,14 @@ namespace hpp {
 
     PathVectorPtr_t PathPlanner::solve ()
     {
+      //srand (time (NULL));
       interrupt_ = false;
       bool solved = false;
       startSolve ();
-      tryDirectPath ();
       solved = roadmap_->pathExists ();
-      if (solved ) {
-	hppDout (info, "tryDirectPath succeeded");
-      }
+      if (!solved)
+	tryDirectPath ();
+      solved = roadmap_->pathExists ();
       if (interrupt_) throw std::runtime_error ("Interruption");
       while (!solved) {
 	oneStep ();
@@ -90,6 +90,7 @@ namespace hpp {
 	if (interrupt_) throw std::runtime_error ("Interruption");
       }
       PathVectorPtr_t planned =  computePath ();
+      //hppDout (info, "result: " << *planned);
       return finishSolve (planned);
     }
 

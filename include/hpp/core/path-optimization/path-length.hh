@@ -39,6 +39,7 @@ namespace hpp {
       public:
 	static PathLengthPtr_t create (const WeighedDistancePtr_t& distance,
 				       const PathVectorPtr_t& path);
+	virtual void setLambda (const vector_t& lambda) const;
       protected:
 	PathLength (const WeighedDistancePtr_t& distance,
 		    const PathVectorPtr_t& path);
