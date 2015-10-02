@@ -91,6 +91,7 @@ SET(${PROJECT_NAME}_HEADERS
   include/hpp/core/plan-and-optimize.hh
   include/hpp/core/problem.hh
   include/hpp/core/problem-solver.hh
+  include/hpp/core/prune.hh
   include/hpp/core/random-shortcut.hh
   include/hpp/core/roadmap.hh
   include/hpp/core/steering-method.hh

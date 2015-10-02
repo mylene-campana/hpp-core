@@ -66,6 +66,7 @@ namespace hpp {
     HPP_PREDEF_CLASS (PlanAndOptimize);
     HPP_PREDEF_CLASS (Problem);
     class ProblemSolver;
+    HPP_PREDEF_CLASS (Prune);
     HPP_PREDEF_CLASS (RandomShortcut);
     HPP_PREDEF_CLASS (Roadmap);
     HPP_PREDEF_CLASS (SteeringMethod);
@@ -181,6 +182,7 @@ namespace hpp {
     typedef boost::shared_ptr <PlanAndOptimize> PlanAndOptimizePtr_t;
     typedef Problem* ProblemPtr_t;
     typedef ProblemSolver* ProblemSolverPtr_t;
+    typedef boost::shared_ptr <Prune> PrunePtr_t;
     typedef boost::shared_ptr <RandomShortcut> RandomShortcutPtr_t;
     typedef boost::shared_ptr <Roadmap> RoadmapPtr_t;
     typedef boost::shared_ptr <StraightPath> StraightPathPtr_t;

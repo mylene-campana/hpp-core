@@ -56,6 +56,7 @@ SET(${LIBRARY_NAME}_SOURCES
   plan-and-optimize.cc
   problem.cc
   problem-solver.cc
+  prune.cc
   random-shortcut.cc
   roadmap.cc
   straight-path.cc

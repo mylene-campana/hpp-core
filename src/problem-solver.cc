@@ -32,6 +32,7 @@
 #include <hpp/core/path-optimization/gradient-based.hh>
 #include <hpp/core/path-optimization/partial-shortcut.hh>
 #include <hpp/core/path-optimization/config-optimization.hh>
+#include <hpp/core/prune.hh>
 #include <hpp/core/random-shortcut.hh>
 #include <hpp/core/roadmap.hh>
 #include <hpp/core/steering-method-straight.hh>
@@ -87,33 +88,44 @@ namespace hpp {
       passiveDofsMap_ (), comcMap_ (),
       distanceBetweenObjects_ ()
     {
-      add <PathPlannerBuilder_t> ("DiffusingPlanner",     DiffusingPlanner::createWithRoadmap);
-      add <PathPlannerBuilder_t> ("VisibilityPrmPlanner", VisibilityPrmPlanner::createWithRoadmap);
+      add <PathPlannerBuilder_t> ("DiffusingPlanner",
+				  DiffusingPlanner::createWithRoadmap);
+      add <PathPlannerBuilder_t> ("VisibilityPrmPlanner",
+				  VisibilityPrmPlanner::createWithRoadmap);
 
-      add <ConfigurationShooterBuilder_t> ("BasicConfigurationShooter", BasicConfigurationShooter::create);
+      add <ConfigurationShooterBuilder_t> ("BasicConfigurationShooter",
+					   BasicConfigurationShooter::create);
 
-      add <SteeringMethodBuilder_t> ("SteeringMethodStraight", boost::bind(
-            static_cast<SteeringMethodStraightPtr_t (*)(const ProblemPtr_t&)>
-              (&SteeringMethodStraight::create), _1
-            ));
+      add <SteeringMethodBuilder_t> ("SteeringMethodStraight",
+				     boost::bind(static_cast<SteeringMethodStraightPtr_t (*)(const ProblemPtr_t&)> (&SteeringMethodStraight::create), _1));
 
       // Store path optimization methods in map.
-      add <PathOptimizerBuilder_t> ("RandomShortcut",     RandomShortcut::create);
-      add <PathOptimizerBuilder_t> ("GradientBased",      pathOptimization::GradientBased::create);
-      add <PathOptimizerBuilder_t> ("PartialShortcut",    pathOptimization::PartialShortcut::create);
-      add <PathOptimizerBuilder_t> ("ConfigOptimization", pathOptimization::ConfigOptimization::create);
-      add <PathOptimizerBuilder_t> ("None",               NoneOptimizer::create); // TODO: Delete me
+      add <PathOptimizerBuilder_t> ("RandomShortcut", Prune::create);
+      add <PathOptimizerBuilder_t> ("Prune", RandomShortcut::create);
+      add <PathOptimizerBuilder_t> ("GradientBased",
+				    pathOptimization::GradientBased::create);
+      add <PathOptimizerBuilder_t> ("PartialShortcut",
+				    pathOptimization::PartialShortcut::create);
+      add <PathOptimizerBuilder_t> ("ConfigOptimization",
+				    pathOptimization::ConfigOptimization::create);
+      add <PathOptimizerBuilder_t> ("None",
+				    NoneOptimizer::create); // TODO: Delete me
 
       // Store path validation methods in map.
       add <PathValidationBuilder_t> ("Discretized", DiscretizedCollisionChecking::create);
-      add <PathValidationBuilder_t> ("Progressive", continuousCollisionChecking::Progressive::create);
-      add <PathValidationBuilder_t> ("Dichotomy",   continuousCollisionChecking::Dichotomy::create);
+      add <PathValidationBuilder_t> ("Progressive",
+				     continuousCollisionChecking::Progressive::create);
+      add <PathValidationBuilder_t> ("Dichotomy",
+				     continuousCollisionChecking::Dichotomy::create);
 
       // Store path projector methods in map.
-      add <PathProjectorBuilder_t> ("None",        NonePathProjector::create);
+      add <PathProjectorBuilder_t> ("None",
+				    NonePathProjector::create);
       add <PathProjectorBuilder_t> ("Progressive", pathProjector::Progressive::create);
-      add <PathProjectorBuilder_t> ("Dichotomy",   pathProjector::Dichotomy::create);
-      add <PathProjectorBuilder_t> ("Global",      pathProjector::Global::create);
+      add <PathProjectorBuilder_t> ("Dichotomy",
+				    pathProjector::Dichotomy::create);
+      add <PathProjectorBuilder_t> ("Global",
+				    pathProjector::Global::create);
     }
 
     ProblemSolver::~ProblemSolver ()
@@ -124,8 +136,8 @@ namespace hpp {
     void ProblemSolver::steeringMethodType (const std::string& type)
     {
       if (!has <SteeringMethodBuilder_t> (type)) {
-	throw std::runtime_error (std::string ("No steering method with name ") +
-				  type);
+	throw std::runtime_error
+	  (std::string ("No steering method with name ") + type);
       }
       steeringMethodType_ = type;
     }
@@ -142,8 +154,8 @@ namespace hpp {
     void ProblemSolver::configurationShooterType (const std::string& type)
     {
       if (!has <ConfigurationShooterBuilder_t> (type)) {
-    throw std::runtime_error (std::string ("No configuration shooter with name ") +
-                  type);
+    throw std::runtime_error
+      (std::string ("No configuration shooter with name ") + type);
       }
       configurationShooterType_ = type;
     }
