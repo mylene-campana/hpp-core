@@ -137,23 +137,25 @@ namespace hpp {
       }
 
       JointVector_t PartialShortcut::generateJointVector
-        (const PathVectorPtr_t& pv) const
+      (const PathVectorPtr_t& pv) const
       {
         const JointVector_t& rjv = problem().robot()->getJointVector ();
         JointVector_t jv;
-        ConfigProjectorPtr_t proj =
-          pv->pathAtRank (0)->constraints ()->configProjector ();
-        LockedJoints_t lj;
-        if (proj) lj = proj->lockedJoints ();
+	ConfigProjectorPtr_t proj;
+	LockedJoints_t lj;
+	if (pv->pathAtRank (0)->constraints ()){
+	  proj = pv->pathAtRank (0)->constraints ()->configProjector ();
+	  if (proj) lj = proj->lockedJoints ();
+	}
 
         for (JointVector_t::const_iterator it = rjv.begin ();
-            it != rjv.end (); ++it) {
+	     it != rjv.end (); ++it) {
           if ((*it)->numberDof () > 0) {
             bool lock = false;
             if (parameters.removeLockedJoints && proj) {
               const std::size_t rkCfg = (*it)->rankInConfiguration ();
               for (LockedJoints_t::const_iterator itLJ = lj.begin ();
-                  itLJ != lj.end (); ++itLJ) {
+		   itLJ != lj.end (); ++itLJ) {
                 if ((*itLJ)->rankInConfiguration () == rkCfg) {
                   lock = true;
                   break;
