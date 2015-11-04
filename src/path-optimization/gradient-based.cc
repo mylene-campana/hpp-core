@@ -254,6 +254,7 @@ namespace hpp {
 	  hppDout (info, "rank(J) = " << rank);
 	  if (rank < J_.rows ()) {
 	    p_.setZero ();
+	    hppDout (error, "rank loss");
 	    return p_;
 	  }
 	  V0_ = svd.matrixV ().rightCols (numberDofs_-rank);
@@ -264,10 +265,10 @@ namespace hpp {
 	    Hz_ = V0_.transpose () * H_ * V0_;
 	    gz_ = - V0_.transpose () * (rgrad_.transpose () + H_ * p0_);
 	    Jacobi_t svd2 (Hz_, Eigen::ComputeThinU | Eigen::ComputeFullV);
-	    rank = svd2.rank ();
+	    /*rank = svd2.rank ();
 	    hppDout (info, "Hz_ singular values = " <<
 		     svd2.singularValues ().transpose ());
-	    hppDout (info, "rank(Hz_) = " << rank);
+		     hppDout (info, "rank(Hz_) = " << rank);*/
 	    vector_t z (svd2.solve (gz_));
 	    hppDout (info, "Hz_ * z - gz_=" << (Hz_ * z - gz_).transpose ());
 	    p_ = p0_ + V0_ * z;
@@ -286,6 +287,8 @@ namespace hpp {
       typedef std::vector <std::pair <CollisionPathValidationReportPtr_t,
 				      std::size_t> > Reports_t;
 
+      // avoid adding the same collision twice in reports
+      // because the subpath 2 'begins' in the obstacle
       static bool collisionRedundancy (const std::size_t& i1,
 				       const std::size_t& i2,
 				       const value_type& param1,
@@ -321,7 +324,7 @@ namespace hpp {
 		(std::make_pair (HPP_STATIC_PTR_CAST
 				 (CollisionPathValidationReport, report), i));
 	    } else
-	      hppDout (info, "collision non added 'cause redundant");
+	      hppDout (info, "collision non added because already reported");
 	    redundantColl = false;
 	    valid = false;
 	  }
@@ -341,7 +344,7 @@ namespace hpp {
 	ConstraintSetPtr_t constraints (problem ().constraints ());
 	Configuration_t qCollConstr, qCollConstr_old;
 	ConfigValidationsPtr_t configValtions (problem ().configValidations());
-	Reports_t reports;
+	Reports_t reports, newReports;
 	bool noCollision;
 	bool compute_iterate = true;
 	/* Create initial path */
@@ -349,6 +352,7 @@ namespace hpp {
 	rowvector_t grad; grad.resize (cost_->inputDerivativeSize ());
 	pathToVector (path, x1);
 	vector_t x0 = x1;
+	vector_t x = x1;
 	Hinverse_ = H_.inverse ();
 	//hppDout (info, "Hessian = " << H_);
 	//hppDout (info, "Hinverse_ = " << Hinverse_);
@@ -364,7 +368,6 @@ namespace hpp {
 
 	PathVectorPtr_t path0 (path);
 	CollisionConstraintsResults_t collisionConstraints;
-	//alpha_ = 1.;// ROTATION OPTIMIZATION TEST ONLY
 	if (!minimumReached) {
 	  do {
 	    HPP_START_TIMECOUNTER(GBO_oneStep);
@@ -405,12 +408,62 @@ namespace hpp {
 	      if (alpha_ != 1.) {
 		//for (Reports_t::const_iterator it = reports.begin ();
 		//   it != reports.end (); ++it) {
-		Reports_t::const_iterator it = reports.begin ();
+		bool isConstraintRedundant = false;
+
+		// Compute constraint ccr
 		CollisionConstraintsResult ccr (robot_, path0, path1,
-						*it, J_.rows (),
+						*(reports.begin ()), J_.rows (),
 						robotNbNonLockedDofs_);
-		// Compute J_
+		
+		// Linearize ccr around path0 and add it to J_
 		addCollisionConstraint (ccr, path0);
+		
+		// check redundancy (rank loss in J_)
+		Jacobi_t svd (J_, Eigen::ComputeThinU | Eigen::ComputeFullV);
+		size_type rank = svd.rank();
+		hppDout (info, "Jrows = " << J_.rows ());
+		hppDout (info, "rank(J) = " << rank);
+		isConstraintRedundant = rank < J_.rows ();
+		
+		// Solve redundancy if necessary (finding a new constraint)
+		while (isConstraintRedundant) {
+		  hppDout (info, "redundancy found");
+		  J_.conservativeResize(J_.rows ()-1, J_.cols ());
+		  // execute step while halving alpha
+		  alpha_ *= 0.5;
+		  hppDout (info, "alpha_ = " << alpha_);
+		  integrate (x0, alpha_*p_, x);
+		  PathVectorPtr_t pathTmp =
+		    PathVector::create (configSize_, robotNumberDofs_);
+		  vectorToPath (x, pathTmp);
+		  // findNewConstraint with temporary path
+		  if (validatePath (pathValidation, pathTmp, newReports)) {
+		    // compute and linearize new constraint around temp. path
+		    hppDout (info, "temporary path collision-free");
+		    path0 = pathTmp;
+		    x0 = x;
+		    CollisionConstraintsResult ccr (robot_, path0, path1,
+						    *(reports.begin ()),
+						    J_.rows (),
+						    robotNbNonLockedDofs_);
+		  } else {
+		    // compute new constraint with temp. path collision
+		    hppDout (info, "intermediaite step in collision");
+		    path1 = pathTmp;
+		    CollisionConstraintsResult ccr (robot_, path0, path1,
+						    *(newReports.begin ()),
+						    J_.rows (),
+						    robotNbNonLockedDofs_);
+		  }
+		  addCollisionConstraint (ccr, path0);
+		  // check if new constraint solves redundancy
+		  Jacobi_t svd (J_, Eigen::ComputeThinU | Eigen::ComputeFullV);
+		  rank = svd.rank();
+		  isConstraintRedundant = rank < J_.rows ();
+		  hppDout (info, "Jrows = " << J_.rows ());
+		  hppDout (info, "rank(J) = " << rank);
+		}
+
 		collisionConstraints.push_back (ccr);
 		hppDout (info, "Number of collision constraints: "
 			 << collisionConstraints.size ());

@@ -213,7 +213,7 @@ namespace hpp {
 	  value_type position = 0; // 0=not extremity, 1=begin, 2=end
 	  if (rank + 1 == 0)
 	    position = 1;
-	  if (rank + 1 == (size_type) nbWaypoints_)
+	  if (rank + 1 == nbWaypoints_)
 	    position = 2;
 
 	  configProjector_->computeValueAndJacobian
