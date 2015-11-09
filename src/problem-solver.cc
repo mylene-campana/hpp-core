@@ -17,6 +17,7 @@
 // <http://www.gnu.org/licenses/>.
 
 #include <hpp/util/debug.hh>
+#include <hpp/model/configuration.hh>
 #include <hpp/model/collision-object.hh>
 #include <hpp/constraints/differentiable-function.hh>
 #include <hpp/core/problem-solver.hh>
@@ -126,6 +127,7 @@ namespace hpp {
 				    pathProjector::Dichotomy::create);
       add <PathProjectorBuilder_t> ("Global",
 				    pathProjector::Global::create);
+      //srand (40);
     }
 
     ProblemSolver::~ProblemSolver ()
@@ -236,6 +238,8 @@ namespace hpp {
 
     void ProblemSolver::initConfig (const ConfigurationPtr_t& config)
     {
+      //normalize (robot_, *config);
+      //hppDout (info, "normalized init config: " << (*config).transpose ());
       initConf_ = config;
     }
 
@@ -246,6 +250,8 @@ namespace hpp {
 
     void ProblemSolver::addGoalConfig (const ConfigurationPtr_t& config)
     {
+      //normalize (robot_, *config);
+      //hppDout (info, "normalized goal config: " << (*config).transpose ());
       goalConfigurations_.push_back (config);
     }
 

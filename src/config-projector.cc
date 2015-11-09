@@ -18,7 +18,7 @@
 
 #include <limits>
 #include <hpp/util/debug.hh>
-#include <hpp/util/timer.hh>
+//#include <hpp/util/timer.hh>
 #include <hpp/model/configuration.hh>
 #include <hpp/model/device.hh>
 #include <hpp/model/joint.hh>
@@ -36,8 +36,8 @@
 namespace hpp {
   namespace core {
     namespace {
-      HPP_DEFINE_TIMECOUNTER (projection);
-      HPP_DEFINE_TIMECOUNTER (optimize);
+      //HPP_DEFINE_TIMECOUNTER (projection);
+      //HPP_DEFINE_TIMECOUNTER (optimize);
     }
 
     std::ostream& operator<< (std::ostream& os, const hpp::statistics::SuccessStatistics& ss)
@@ -202,7 +202,7 @@ namespace hpp {
 	   itLocked != lockedJoints_.end (); ++itLocked) {
     std::size_t index = (*itLocked)->rankInVelocity ();
 	nbLockedDofs_ += (*itLocked)->numberDof ();
-	hppDout (info, "number locked dof " << (*itLocked)->numberDof ());
+	//hppDout (info, "number locked dof " << (*itLocked)->numberDof ());
 	size = (index - latestIndex);
 	if (size > 0) {
 	  interval.first = latestIndex;
@@ -525,15 +525,15 @@ namespace hpp {
       computeLockedDofs (configuration);
       if (isSatisfiedNoLockedJoint (configuration)) return true;
       if (functions_.empty ()) return true;
-      if (explicitComputation_) {
+      /*if (explicitComputation_) {
 	hppDout (info, "Explicit computation: " <<
-		 functions_ [0]->functionPtr ()->name ());
+	functions_ [0]->functionPtr ()->name ());
 	HPP_STATIC_CAST_REF_CHECK (ExplicitNumericalConstraint,
-				   *(functions_ [0]));
+	*(functions_ [0]));
 	HPP_STATIC_PTR_CAST (ExplicitNumericalConstraint,
-			     functions_ [0])->solve (configuration);
-      }
-      HPP_START_TIMECOUNTER (projection);
+	functions_ [0])->solve (configuration);
+	}
+	HPP_START_TIMECOUNTER (projection);*/
       value_type alpha = .2;
       value_type alphaMax = .95;
       size_type errorDecreased = 3, iter = 0;
@@ -569,8 +569,8 @@ namespace hpp {
       } else {
         statistics_.addSuccess();
       }
-      HPP_STOP_TIMECOUNTER (projection);
-      HPP_DISPLAY_TIMECOUNTER (projection);
+      //HPP_STOP_TIMECOUNTER (projection);
+      //HPP_DISPLAY_TIMECOUNTER (projection);
       hppDout (info, "number of iterations: " << iter);
       if (squareNorm_ > squareErrorThreshold_) {
 	hppDout (info, "Projection failed.");
@@ -597,7 +597,7 @@ namespace hpp {
       if (!isSatisfied (configuration)) return false;
       if (maxIter == 0) maxIter = maxIterations_;
       hppDout (info, "before optimization: " << configuration.transpose ());
-      HPP_START_TIMECOUNTER (optimize);
+      //HPP_START_TIMECOUNTER (optimize);
       Configuration_t current = configuration;
       std::size_t iter = 0;
       computeValueAndJacobian (configuration, value_, reducedJacobian_);
@@ -619,8 +619,8 @@ namespace hpp {
         configuration = current;
 	++iter;
       } while (iter < maxIter); // && squareNorm_ < squareErrorThreshold_
-      HPP_STOP_TIMECOUNTER (optimize);
-      HPP_DISPLAY_TIMECOUNTER (optimize);
+      //HPP_STOP_TIMECOUNTER (optimize);
+      //HPP_DISPLAY_TIMECOUNTER (optimize);
       hppDout (info, "number of iterations: " << iter);
       if (iter == 0) {
 	hppDout (info, "Optimization failed.");

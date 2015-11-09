@@ -28,6 +28,8 @@
 #include <hpp/core/steering-method.hh>
 #include "astar.hh"
 
+#include <iomanip> // for std::setprecision
+
 namespace hpp {
   namespace core {
 
@@ -75,7 +77,10 @@ namespace hpp {
 
     PathVectorPtr_t PathPlanner::solve ()
     {
-      //srand (time (NULL));
+      //value_type timmy = 1446647606;//time (NULL);
+      value_type timmy = time (NULL);
+      srand (timmy);
+      hppDout (info, "time (NULL)= " << std::setprecision (15) << timmy);
       interrupt_ = false;
       bool solved = false;
       startSolve ();
