@@ -44,6 +44,7 @@ MACRO(ADD_TESTCASE NAME GENERATED)
   # Link against Boost and project library.
   TARGET_LINK_LIBRARIES(${NAME}
     ${Boost_LIBRARIES} hpp-core
+    -lrt # 'clock_gettime' use
     )
 
 ENDMACRO(ADD_TESTCASE)

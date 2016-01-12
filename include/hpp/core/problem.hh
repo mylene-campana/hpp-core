@@ -204,6 +204,13 @@ namespace hpp {
       void collisionObstacles (const ObjectVector_t& collisionObstacles);
       /// \}
 
+      /// Store optimization time from Gradient-Based optimizer
+      mutable value_type tGB_;
+      /// Store vector of time-values from one optimizer
+      mutable std::vector<value_type> timeValues_;
+      /// Store vector of length-gain-values from one optimizer
+      mutable std::vector<value_type> gainValues_;
+
     private :
       /// The robot
       DevicePtr_t robot_;

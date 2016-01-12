@@ -25,7 +25,10 @@
 #include <hpp/core/path-validation.hh>
 #include <hpp/core/path-vector.hh>
 #include <hpp/core/problem.hh>
+#include <hpp/core/problem-solver.hh>
 #include <hpp/core/random-shortcut.hh>
+
+#define BILLION 1E9
 
 namespace hpp {
   namespace core {
@@ -58,6 +61,11 @@ namespace hpp {
 
     PathVectorPtr_t RandomShortcut::optimize (const PathVectorPtr_t& path)
     {
+      srand (time (NULL));
+      problem ().timeValues_.clear ();
+      problem ().gainValues_.clear ();
+      struct timespec start, now;
+      clock_gettime(CLOCK_MONOTONIC, &start);
       using std::numeric_limits;
       using std::make_pair;
       bool finished = false;
@@ -65,12 +73,16 @@ namespace hpp {
       Configuration_t q0 = path->initial ();
       Configuration_t q3 = path->end ();
       PathVectorPtr_t tmpPath = path;
+      const value_type initialLength = pathLength (path,
+						   problem ().distance ());
+      value_type currentTime, currentLength, previousLength = initialLength;
+      std::size_t iVec = 0; // index for timeValues and gainValues vectors
 
-      // Maximal number of iterations without improvements
+	// Maximal number of iterations without improvements
       const std::size_t n = 5;
       std::deque <value_type> length (n-1,
 				      numeric_limits <value_type>::infinity ());
-      length.push_back (pathLength (tmpPath, problem ().distance ()));
+      length.push_back (initialLength);
       PathVectorPtr_t result;
       Configuration_t q1 (path->outputSize ()),
                       q2 (path->outputSize ());
@@ -123,11 +135,25 @@ namespace hpp {
 	  result->appendPath (straight [2]);
 	else
 	  result->concatenate (*(tmpPath->extract
-				(make_pair <value_type, value_type> (t2, t3))->
+				 (make_pair <value_type, value_type> (t2, t3))->
 				 as <PathVector> ()));
-	length.push_back (pathLength (result, problem ().distance ()));
+	currentLength = pathLength (result, problem ().distance ());
+	length.push_back (currentLength);
 	length.pop_front ();
-	finished = (length [0] <= length [n-1]);
+	//finished = (length [0] <= length [n-1]);
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	currentTime = now.tv_sec - start.tv_sec +
+	  (now.tv_nsec - start.tv_nsec) / BILLION;
+	if (currentLength < previousLength) {
+	  problem ().timeValues_.resize (iVec+1);
+	  problem ().gainValues_.resize (iVec+1);
+	  problem ().timeValues_ [iVec] = currentTime;
+	  problem ().gainValues_ [iVec] = (initialLength -
+					   currentLength)/initialLength;
+	  iVec++;
+	}
+	previousLength = currentLength;
+	finished = currentTime > problem ().tGB_;
 	hppDout (info, "length = " << length [n-1]);
 	tmpPath = result;
       }

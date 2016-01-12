@@ -51,12 +51,31 @@
 // For debug
 #include <hpp/core/problem-solver.hh>
 
+#define BILLION 1E9
+
 namespace hpp {
   namespace core {
     namespace pathOptimization {
       namespace {
         HPP_DEFINE_TIMECOUNTER(GBO_computeIterate);
         HPP_DEFINE_TIMECOUNTER(GBO_oneStep);
+      }
+
+      // Compute the length of a vector of paths assuming that each element
+      // is optimal for the given distance.
+      static value_type pathLength (const PathVectorPtr_t& path,
+				    const DistancePtr_t& distance)
+      {
+	value_type result = 0;
+	for (std::size_t i=0; i<path->numberPaths (); ++i) {
+	  const PathPtr_t& element (path->pathAtRank (i));
+	  const value_type& tmin (element->timeRange ().first);
+	  const value_type& tmax (element->timeRange ().second);
+	  Configuration_t q1 ((*element) (tmin));
+	  Configuration_t q2 ((*element) (tmax));
+	  result += (*distance) (q1, q2);
+	}
+	return result;
       }
 
       using model::displayConfig;
@@ -73,8 +92,8 @@ namespace hpp {
 	configSize_ (robot_->configSize ()), robotNumberDofs_
 	(robot_->numberDof ()),	robotNbNonLockedDofs_ (robot_->numberDof ()),
 	fSize_ (1),
-	initial_ (), end_ (), epsilon_ (1e-3), iterMax_ (30), alphaInit_ (0.1),
-	alphaMax_ (1.)
+	initial_ (), end_ (), epsilon_ (1e-3), iterMax_ (30),
+	alphaInit_ (0.2), alphaMax_ (1.)
       {
 	distance_ = HPP_DYNAMIC_PTR_CAST (WeighedDistance, problem.distance ());
 	if (!distance_) {
@@ -334,6 +353,14 @@ namespace hpp {
 
       PathVectorPtr_t GradientBased::optimize (const PathVectorPtr_t& path)
       {
+	problem ().timeValues_.clear ();
+	problem ().gainValues_.clear ();
+	struct timespec start, now, end;
+	clock_gettime(CLOCK_MONOTONIC, &start);
+	std::size_t iVec = 0; // index for timeValues and gainValues vectors
+	const value_type initialLength = pathLength (path,
+						     problem ().distance ());
+	value_type currentTime, currentLength, previousLength = initialLength;
 	interrupt_ = false;
 	initialize (path);
 	if (nbWaypoints_ == 0) // path is direct and optimal
@@ -490,8 +517,25 @@ namespace hpp {
 	    }
             HPP_STOP_TIMECOUNTER(GBO_oneStep);
             HPP_DISPLAY_TIMECOUNTER(GBO_oneStep);
+	    clock_gettime(CLOCK_MONOTONIC, &now);
+	    currentTime = now.tv_sec - start.tv_sec +
+	      (now.tv_nsec - start.tv_nsec) / BILLION;
+	    currentLength = pathLength (path0, problem ().distance ());
+	    if (currentLength < previousLength) {
+	      problem ().timeValues_.resize (iVec+1);
+	      problem ().gainValues_.resize (iVec+1);
+	      problem ().timeValues_ [iVec] = currentTime;
+	      problem ().gainValues_ [iVec] = (initialLength -
+					       currentLength)/initialLength;
+	      iVec++;
+	    }
+	    previousLength = currentLength;
 	  } while (!(noCollision && minimumReached) && (!interrupt_));
 	} // while (!minimumReached)
+	clock_gettime(CLOCK_MONOTONIC, &end);
+	problem ().tGB_ = end.tv_sec - start.tv_sec +
+	  (end.tv_nsec - start.tv_nsec) / BILLION;
+	hppDout(info, "tGB_: " << problem ().tGB_);
 	return path0;
       }
 

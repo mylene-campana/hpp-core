@@ -49,6 +49,8 @@ namespace hpp {
     {
       configValidations_->add (CollisionValidation::create (robot));
       configValidations_->add (JointBoundValidation::create (robot));
+      timeValues_.reserve (500);
+      gainValues_.reserve (500);
     }
 
     // ======================================================================
