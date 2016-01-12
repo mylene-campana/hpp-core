@@ -93,7 +93,7 @@ namespace hpp {
 	(robot_->numberDof ()),	robotNbNonLockedDofs_ (robot_->numberDof ()),
 	fSize_ (1),
 	initial_ (), end_ (), epsilon_ (1e-3), iterMax_ (30),
-	alphaInit_ (0.2), alphaMax_ (1.)
+	alphaInit_ (problem.alphaInit_), alphaMax_ (1.)
       {
 	distance_ = HPP_DYNAMIC_PTR_CAST (WeighedDistance, problem.distance ());
 	if (!distance_) {
@@ -191,6 +191,7 @@ namespace hpp {
 	/* Store first and last way points */
 	initial_ = path->initial ();
 	end_ = path->end ();
+	alphaInit_ = problem ().alphaInit_;
 	alpha_ = alphaInit_;
       }
 

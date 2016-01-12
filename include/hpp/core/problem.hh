@@ -210,6 +210,8 @@ namespace hpp {
       mutable std::vector<value_type> timeValues_;
       /// Store vector of length-gain-values from one optimizer
       mutable std::vector<value_type> gainValues_;
+      /// To set initial value of Gradient-Based optimizer
+      mutable value_type alphaInit_;
 
     private :
       /// The robot
