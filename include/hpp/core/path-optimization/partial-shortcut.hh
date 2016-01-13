@@ -107,12 +107,17 @@ namespace hpp {
           PathVectorPtr_t optimizeFullPath (const PathVectorPtr_t& pv,
               const JointVector_t& jvIn, JointVector_t& jvOut) const;
 
-          /// optimize each joint in jvIn.
+          /// optimize a random joint in jvIn until problem().tGB_ time is reached.
           /// \param jvIn contains the joints on which optimization should be
           ///        tried
           /// \return the optimized path
           PathVectorPtr_t optimizeRandom (const PathVectorPtr_t& pv,
-              const JointVector_t& jv) const;
+					  const JointVector_t& jv) const;
+			  
+	  // Attributes related to time and length-gain (for optim data gather)
+	  //struct timespec start_;
+	  /// Initial path length for length-gain computation
+	  value_type initialLength_;
       }; // class RandomShortcut
       /// \}
 
