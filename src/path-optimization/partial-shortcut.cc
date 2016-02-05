@@ -222,7 +222,7 @@ namespace hpp {
       PathVectorPtr_t PartialShortcut::optimizeRandom
       (const PathVectorPtr_t& pv, const JointVector_t& jv) const
       {
-	srand (time (NULL));
+	//srand (time (NULL));
 	struct timespec start, now;
 	clock_gettime(CLOCK_MONOTONIC, &start);
 	std::size_t iVec = 0; // index for timeValues and gainValues vectors

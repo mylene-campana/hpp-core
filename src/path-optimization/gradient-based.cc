@@ -435,13 +435,12 @@ namespace hpp {
 	      hppDout (info, "x1 has collisions");
 	      if (alpha_ != 1.) {
 		//for (Reports_t::const_iterator it = reports.begin ();
-		//   it != reports.end (); ++it) {
+		     //  it != reports.end (); ++it) {
 		bool isConstraintRedundant = false;
 
 		// Compute constraint ccr
-		CollisionConstraintsResult ccr (robot_, path0, path1,
-						*(reports.begin ()), J_.rows (),
-						robotNbNonLockedDofs_);
+		CollisionConstraintsResult ccr (robot_, path0, path1, *(reports.begin ()), J_.rows (), robotNbNonLockedDofs_);
+		//CollisionConstraintsResult ccr (robot_, path0, path1, *it, J_.rows (), robotNbNonLockedDofs_);
 		
 		// Linearize ccr around path0 and add it to J_
 		addCollisionConstraint (ccr, path0);
@@ -453,8 +452,18 @@ namespace hpp {
 		hppDout (info, "rank(J) = " << rank);
 		isConstraintRedundant = rank < J_.rows ();
 		
+		// Avoid redundancy solving
+		if (isConstraintRedundant) {
+		  hppDout(error, "redundant constraint");
+		  clock_gettime(CLOCK_MONOTONIC, &end);
+		  problem ().tGB_ = end.tv_sec - start.tv_sec +
+		    (end.tv_nsec - start.tv_nsec) / BILLION;
+		  hppDout(info, "tGB_: " << problem ().tGB_);
+		  return path0;
+		}
+
 		// Solve redundancy if necessary (finding a new constraint)
-		while (isConstraintRedundant) {
+		/*while (isConstraintRedundant) {
 		  hppDout (info, "redundancy found");
 		  J_.conservativeResize(J_.rows ()-1, J_.cols ());
 		  // execute step while halving alpha
@@ -490,7 +499,7 @@ namespace hpp {
 		  isConstraintRedundant = rank < J_.rows ();
 		  hppDout (info, "Jrows = " << J_.rows ());
 		  hppDout (info, "rank(J) = " << rank);
-		}
+		}*/
 
 		collisionConstraints.push_back (ccr);
 		hppDout (info, "Number of collision constraints: "
@@ -498,7 +507,7 @@ namespace hpp {
 		// When adding a new constraint, try first minimum under this
 		// constraint. If this latter minimum is in collision,
 		// re-initialize alpha_ to alphaInit_.
-		//}
+		//}// for collision reports
 		alpha_ = 1.;
 		compute_iterate = true;
 	      } else {
@@ -522,6 +531,7 @@ namespace hpp {
 	    currentTime = now.tv_sec - start.tv_sec +
 	      (now.tv_nsec - start.tv_nsec) / BILLION;
 	    currentLength = pathLength (path0, problem ().distance ());
+	    hppDout (info, "currentLength= " << currentLength);
 	    if (currentLength < previousLength) {
 	      problem ().timeValues_.resize (iVec+1);
 	      problem ().gainValues_.resize (iVec+1);

@@ -127,7 +127,8 @@ namespace hpp {
 				    pathProjector::Dichotomy::create);
       add <PathProjectorBuilder_t> ("Global",
 				    pathProjector::Global::create);
-      //srand (40);
+      //srand(5000);
+      //srand(time(NULL));
     }
 
     ProblemSolver::~ProblemSolver ()

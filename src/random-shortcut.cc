@@ -61,7 +61,7 @@ namespace hpp {
 
     PathVectorPtr_t RandomShortcut::optimize (const PathVectorPtr_t& path)
     {
-      srand (time (NULL));
+      //srand (time (NULL));
       problem ().timeValues_.clear ();
       problem ().gainValues_.clear ();
       struct timespec start, now;

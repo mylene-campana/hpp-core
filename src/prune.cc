@@ -91,7 +91,7 @@ namespace hpp {
     {
       using std::make_pair;
       const DistancePtr_t& distance = problem ().distance ();
-      PathValidationPtr_t pathValidation (problem ().pathValidation ());
+      const PathValidationPtr_t pathValidation (problem ().pathValidation ());
       const SteeringMethodPtr_t& sm (problem ().steeringMethod ());
       PathValidationReportPtr_t report;
       PathPtr_t validPart;
