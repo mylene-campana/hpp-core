@@ -101,8 +101,8 @@ namespace hpp {
 				     boost::bind(static_cast<SteeringMethodStraightPtr_t (*)(const ProblemPtr_t&)> (&SteeringMethodStraight::create), _1));
 
       // Store path optimization methods in map.
-      add <PathOptimizerBuilder_t> ("RandomShortcut", Prune::create);
-      add <PathOptimizerBuilder_t> ("Prune", RandomShortcut::create);
+      add <PathOptimizerBuilder_t> ("Prune", Prune::create);
+      add <PathOptimizerBuilder_t> ("RandomShortcut", RandomShortcut::create);
       add <PathOptimizerBuilder_t> ("GradientBased",
 				    pathOptimization::GradientBased::create);
       add <PathOptimizerBuilder_t> ("PartialShortcut",
