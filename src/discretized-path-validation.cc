@@ -22,6 +22,7 @@
 #include <hpp/core/config-validations.hh>
 #include <hpp/core/path.hh>
 #include <hpp/core/discretized-path-validation.hh>
+#include <hpp/util/debug.hh>
 
 namespace hpp {
   namespace core {
@@ -51,6 +52,7 @@ namespace hpp {
     (const PathPtr_t& path, bool reverse, PathPtr_t& validPart,
      PathValidationReportPtr_t& validationReport)
     {
+        hppDout(notice,"path validation, reverse : "<<reverse);
       ValidationReportPtr_t configReport;
       assert (path);
       bool valid = true;
@@ -109,6 +111,7 @@ namespace hpp {
 	    finished ++;
 	  }
 	}
+    hppDout(notice,"path validation, end");
 	if (valid) {
 	  validPart = path;
 	  return true;

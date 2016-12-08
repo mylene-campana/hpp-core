@@ -46,8 +46,7 @@ namespace hpp {
       initConf_ (), target_ (),
       steeringMethod_ (SteeringMethodStraight::create (this)),
       configValidations_ (ConfigValidations::create ()),
-      pathValidation_ (DiscretizedCollisionChecking::create
-		       (robot, 0.02)),
+      pathValidation_ (),
       collisionObstacles_ (), constraints_ (),
       configurationShooter_(BasicConfigurationShooter::create (robot)),
       plannerIterLimit_ (500000)
@@ -58,8 +57,11 @@ namespace hpp {
       parabolaResults_.resize (4);
       memset(&parabolaResults_[0], 0,
 	     parabolaResults_.size() * sizeof parabolaResults_[0]);
-      add<boost::any>("PathOptimizersNumberOfLoops", (std::size_t)5);
+      //add<boost::any>("PathOptimizersNumberOfLoops", (std::size_t)5);
       hppDout (info, "initial plannerIterLimit_= " << plannerIterLimit_);
+      DiscretizedCollisionCheckingPtr_t pathVal = DiscretizedCollisionChecking::create(robot, 0.05);
+      pathValidation(pathVal);
+      add<double>("PathOptimizersNumberOfLoops", (std::size_t)5);
     }
 
     // ======================================================================
@@ -205,18 +207,18 @@ namespace hpp {
 
     // ======================================================================
 
-    void Problem::setParameter (const std::string& name, const boost::any& value)
+    void Problem::setParameter (const std::string& name, const double& value)
       throw (std::invalid_argument)
     {
-      if (has<boost::any>(name)) {
+     /* if (has<boost::any>(name)) {
         const boost::any& val = get<boost::any>(name);
         if (value.type() != val.type()) {
           std::string ret = "Wrong boost::any type. Expects ";
           ret += val.type().name();
           throw std::invalid_argument (ret.c_str());
         }
-      }
-      add<boost::any> (name, value);
+      }*/
+      add<double> (name, value);
     }
 
     // ======================================================================

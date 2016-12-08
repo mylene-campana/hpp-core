@@ -46,6 +46,8 @@ namespace hpp {
       PathProjectorBuilder_t;
     typedef boost::function <ConfigurationShooterPtr_t (const DevicePtr_t&) >
       ConfigurationShooterBuilder_t;
+  typedef boost::function <DistancePtr_t (const DevicePtr_t&) >
+    DistanceBuilder_t;
     typedef boost::function <SteeringMethodPtr_t (const ProblemPtr_t&) >
       SteeringMethodBuilder_t;
     typedef std::vector<CollisionObjectPtr_t > AffordanceObjects_t;
@@ -64,6 +66,7 @@ namespace hpp {
                              PathProjectorBuilder_t,
                              ConfigurationShooterBuilder_t,
                              NumericalConstraintPtr_t,
+                             DistanceBuilder_t,
                              SteeringMethodBuilder_t,
                              AffordanceObjects_t,
                              AffordanceConfig_t > >
@@ -120,10 +123,25 @@ namespace hpp {
       const std::string& pathPlannerType () const {
         return pathPlannerType_;
       }
+      /// Set distance type
+      void distanceType (const std::string& type);
+      const std::string& distanceType () const {
+        return distanceType_;
+      }
       /// Set steering method type
       void steeringMethodType (const std::string& type);
       const std::string& steeringMethodType () const {
         return steeringMethodType_;
+      }
+      /// Add a distance type
+      /// \param type name of the distance type
+      /// \param static method that creates a distance
+      /// with robot as input
+      /// \deprecated use add <DistanceBuilder_t> (type, builder) instead
+      void addDistanceType (const std::string& type,
+                   const DistanceBuilder_t& builder) HPP_CORE_DEPRECATED
+      {
+    add <DistanceBuilder_t> (type, builder);
       }
       /// Add a SteeringMethod type
       /// \param type name of the SteeringMethod type
@@ -143,6 +161,8 @@ namespace hpp {
       /// \param type name of the ConfigurationShooter type
       /// \param static method that creates a ConfigurationShooter
       /// with robot as input
+      /// \deprecated use add <ConfigurationShooterBuilder_t> (type, builder)
+      /// instead.
       void addConfigurationShooterType (const std::string& type,
 			       const ConfigurationShooterBuilder_t& builder)
         HPP_CORE_DEPRECATED
@@ -153,6 +173,7 @@ namespace hpp {
       /// \param type name of the new path planner type
       /// \param static method that creates a path planner with a problem
       /// and a roadmap as input
+      /// \deprecated use add <PathPlannerBuilder_t> (type, builder) instead
       void addPathPlannerType (const std::string& type,
 			       const PathPlannerBuilder_t& builder)
         HPP_CORE_DEPRECATED
@@ -183,6 +204,7 @@ namespace hpp {
       /// \param type name of the new path optimizer type
       /// \param static method that creates a path optimizer with a problem
       /// as input
+      /// \deprecated use add <PathOptimizerBuilder_t> (type, builder) instead.
       void addPathOptimizerType (const std::string& type,
 				 const PathOptimizerBuilder_t& builder)
         HPP_CORE_DEPRECATED
@@ -213,6 +235,7 @@ namespace hpp {
       /// \param type name of the new path validation method,
       /// \param static method that creates a path validation with a robot
       /// and tolerance as input.
+      /// \deprecated use add <PathValidationBuilder_t> (type, builder) instead.
       void addPathValidationType (const std::string& type,
 				 const PathValidationBuilder_t& builder)
         HPP_CORE_DEPRECATED
@@ -225,6 +248,8 @@ namespace hpp {
       /// \param step discontinuity tolerance
       void pathProjectorType (const std::string& type,
 			      const value_type& step);
+
+      /// Get path projector current type and get tolerance
       const std::string& pathProjectorType (value_type& tolerance) const {
         tolerance = pathProjectorTolerance_;
         return pathProjectorType_;
@@ -234,6 +259,7 @@ namespace hpp {
       /// \param type name of the new path projector method,
       /// \param static method that creates a path projector with a distance
       /// and tolerance as input.
+      /// \deprecated use add <PathProjectorBuilder_t> (type, builder) instead.
       void addPathProjectorType (const std::string& type,
 				 const PathProjectorBuilder_t& builder)
         HPP_CORE_DEPRECATED
@@ -497,6 +523,15 @@ namespace hpp {
         return s;
       }
 
+      /// Erase a path.
+      void erasePath (std::size_t pathId)
+      {
+	PathVectors_t::iterator it = paths_.begin();
+	std::advance(it, pathId);
+
+	paths_.erase(it);
+      }
+
       /// Return vector of paths
       const PathVectors_t& paths () const
       {
@@ -560,6 +595,11 @@ namespace hpp {
       /// with accurate orientations
       PathVectorPtr_t createOrientations (PathVectorPtr_t path);
 
+      /// Initialize distance
+      ///
+      /// Set distance by calling the distance factory
+      void initDistance ();
+
       /// Initialize steering method
       ///
       /// Set steering method by calling the steering method factory
@@ -621,6 +661,8 @@ namespace hpp {
       ConstraintSetPtr_t goalConstraints_;
       /// Configuration shooter
       std::string configurationShooterType_;
+      /// Steering method
+      std::string distanceType_;
       /// Steering method
       std::string steeringMethodType_;
       /// Path optimizer

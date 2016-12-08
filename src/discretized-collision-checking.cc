@@ -19,6 +19,7 @@
 #include <hpp/core/discretized-collision-checking.hh>
 #include <hpp/core/discretized-path-validation.hh>
 #include <hpp/core/collision-validation.hh>
+#include <hpp/core/joint-bound-validation.hh>
 
 namespace hpp {
   namespace core {
@@ -39,6 +40,7 @@ namespace hpp {
 
     {
       add (CollisionValidationPtr_t (CollisionValidation::create (robot)));
+      add (JointBoundValidationPtr_t (JointBoundValidation::create (robot)));
     }
 
   } // namespace core

@@ -43,6 +43,7 @@ namespace hpp {
     HPP_PREDEF_CLASS (Constraint);
     HPP_PREDEF_CLASS (ConstraintSet);
     HPP_PREDEF_CLASS (DiffusingPlanner);
+    HPP_PREDEF_CLASS (DimtRRT);
     HPP_PREDEF_CLASS (Distance);
     HPP_PREDEF_CLASS (DistanceBetweenObjects);
     HPP_PREDEF_CLASS (DiscretizedCollisionChecking);
@@ -57,6 +58,8 @@ namespace hpp {
     HPP_PREDEF_CLASS (SubchainPath);
     HPP_PREDEF_CLASS (JointBoundValidation);
     struct JointBoundValidationReport;
+    HPP_PREDEF_CLASS (TorqueBoundValidation);
+    struct TorqueBoundValidationReport;
     class Node;
     HPP_PREDEF_CLASS (Path);
     HPP_PREDEF_CLASS (PathOptimizer);
@@ -71,15 +74,19 @@ namespace hpp {
     class ProblemSolver;
     HPP_PREDEF_CLASS (Prune);
     HPP_PREDEF_CLASS (RandomShortcut);
+    HPP_PREDEF_CLASS (RandomShortcutOriented);
     HPP_PREDEF_CLASS (Roadmap);
     HPP_PREDEF_CLASS (SteeringMethod);
     HPP_PREDEF_CLASS (SteeringMethodStraight);
     HPP_PREDEF_CLASS (StraightPath);
     HPP_PREDEF_CLASS (InterpolatedPath);
     HPP_PREDEF_CLASS (ReedsSheppPath);
+    HPP_PREDEF_CLASS (KinodynamicPath);    
+    HPP_PREDEF_CLASS (KinodynamicOrientedPath);
     HPP_PREDEF_CLASS (ValidationReport);
     HPP_PREDEF_CLASS (VisibilityPrmPlanner);
     HPP_PREDEF_CLASS (WeighedDistance);
+    HPP_PREDEF_CLASS (KinodynamicDistance);
     class KDTree;
 
     class ComparisonType;
@@ -132,6 +139,7 @@ namespace hpp {
     typedef constraints::DifferentiableFunctionPtr_t
     DifferentiableFunctionPtr_t;
     typedef boost::shared_ptr <DiffusingPlanner> DiffusingPlannerPtr_t;
+    typedef boost::shared_ptr <DimtRRT> DimtRRTPtr_t;
     typedef boost::shared_ptr <DiscretizedCollisionChecking>
     DiscretizedCollisionCheckingPtr_t;
     typedef boost::shared_ptr <DiscretizedPathValidation>
@@ -153,6 +161,9 @@ namespace hpp {
     typedef model::Joint Joint;
     typedef model::JointConstPtr_t JointConstPtr_t;
     typedef model::JointPtr_t JointPtr_t;
+    typedef boost::shared_ptr <TorqueBoundValidation> TorqueBoundValidationPtr_t;
+    typedef boost::shared_ptr <TorqueBoundValidationReport>
+    TorqueBoundValidationReportPtr_t;
     typedef boost::shared_ptr <JointBoundValidation> JointBoundValidationPtr_t;
     typedef boost::shared_ptr <JointBoundValidationReport>
     JointBoundValidationReportPtr_t;
@@ -192,11 +203,16 @@ namespace hpp {
     typedef ProblemSolver* ProblemSolverPtr_t;
     typedef boost::shared_ptr <Prune> PrunePtr_t;
     typedef boost::shared_ptr <RandomShortcut> RandomShortcutPtr_t;
+    typedef boost::shared_ptr <RandomShortcutOriented> RandomShortcutOrientedPtr_t;
     typedef boost::shared_ptr <Roadmap> RoadmapPtr_t;
     typedef boost::shared_ptr <StraightPath> StraightPathPtr_t;
     typedef boost::shared_ptr <const StraightPath> StraightPathConstPtr_t;
     typedef boost::shared_ptr <ReedsSheppPath> ReedsSheppPathPtr_t;
     typedef boost::shared_ptr <const ReedsSheppPath> ReedsSheppPathConstPtr_t;
+    typedef boost::shared_ptr <KinodynamicPath> KinodynamicPathPtr_t;
+    typedef boost::shared_ptr <const KinodynamicPath> KinodynamicPathConstPtr_t;
+    typedef boost::shared_ptr <KinodynamicOrientedPath> KinodynamicOrientedPathPtr_t;
+    typedef boost::shared_ptr <const KinodynamicOrientedPath> KinodynamicOrientedPathConstPtr_t;
     typedef boost::shared_ptr <InterpolatedPath> InterpolatedPathPtr_t;
     typedef boost::shared_ptr <const InterpolatedPath> InterpolatedPathConstPtr_t;
     typedef boost::shared_ptr <SteeringMethod> SteeringMethodPtr_t;
@@ -215,6 +231,7 @@ namespace hpp {
     typedef boost::shared_ptr <VisibilityPrmPlanner> VisibilityPrmPlannerPtr_t;
     typedef boost::shared_ptr <ValidationReport> ValidationReportPtr_t;
     typedef boost::shared_ptr <WeighedDistance> WeighedDistancePtr_t;
+    typedef boost::shared_ptr <KinodynamicDistance> KinodynamicDistancePtr_t;
     typedef std::map <std::string, NumericalConstraintPtr_t>
     NumericalConstraintMap_t;
     typedef std::map <std::string, ComparisonTypePtr_t>
@@ -275,6 +292,8 @@ namespace hpp {
       typedef boost::shared_ptr <Interpolated> InterpolatedPtr_t;
       HPP_PREDEF_CLASS (ReedsShepp);
       typedef boost::shared_ptr <ReedsShepp> ReedsSheppPtr_t;
+      HPP_PREDEF_CLASS (Kinodynamic);
+      typedef boost::shared_ptr <Kinodynamic> KinodynamicPtr_t;
     } // namespace steeringMethod
 
     namespace problemTarget {

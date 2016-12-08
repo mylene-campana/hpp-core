@@ -35,12 +35,14 @@ SET(${LIBRARY_NAME}_SOURCES
   continuous-collision-checking/progressive.cc
   continuous-collision-checking/progressive/body-pair-collision.hh
   diffusing-planner.cc
+  dimt-rrt.cc
   discretized-collision-checking.cc
   discretized-path-validation.cc
   distance-between-objects.cc
   explicit-numerical-constraint.cc
   extracted-path.hh
   joint-bound-validation.cc
+  torque-bound-validation.cc
   nearest-neighbor/basic.hh
   nearest-neighbor/basic.cc
   nearest-neighbor/k-d-tree.cc
@@ -56,17 +58,22 @@ SET(${LIBRARY_NAME}_SOURCES
   path-planner.cc
   path-vector.cc
   reeds-shepp-path.cc
+  kinodynamic-path.cc
+  kinodynamic-oriented-path.cc
   steering-method/reeds-shepp.cc
+  steering-method/steering-kinodynamic.cc
   plan-and-optimize.cc
   problem.cc
   problem-solver.cc
   prune.cc
   random-shortcut.cc
+  random-shortcut-oriented.cc
   roadmap.cc
   straight-path.cc
   interpolated-path.cc
   visibility-prm-planner.cc
   weighed-distance.cc
+  kinodynamic-distance.cc
   numerical-constraint.cc
   equation.cc
   locked-joint.cc
@@ -87,7 +94,8 @@ ADD_LIBRARY(${LIBRARY_NAME}
 
 PKG_CONFIG_USE_DEPENDENCY(${LIBRARY_NAME} hpp-util)
 PKG_CONFIG_USE_DEPENDENCY(${LIBRARY_NAME} hpp-statistics)
-PKG_CONFIG_USE_DEPENDENCY(${LIBRARY_NAME} hpp-constraints)
 PKG_CONFIG_USE_DEPENDENCY(${LIBRARY_NAME} hpp-model)
+PKG_CONFIG_USE_DEPENDENCY(${LIBRARY_NAME} hpp-constraints)
+
 
 INSTALL(TARGETS ${LIBRARY_NAME} DESTINATION lib)

@@ -67,6 +67,7 @@ SET(${PROJECT_NAME}_HEADERS
   include/hpp/core/continuous-collision-checking/dichotomy.hh
   include/hpp/core/continuous-collision-checking/progressive.hh
   include/hpp/core/diffusing-planner.hh
+  include/hpp/core/dimt-rrt.hh
   include/hpp/core/discretized-collision-checking.hh
   include/hpp/core/discretized-path-validation.hh
   include/hpp/core/distance.hh
@@ -76,6 +77,7 @@ SET(${PROJECT_NAME}_HEADERS
   include/hpp/core/explicit-relative-transformation.hh
   include/hpp/core/fwd.hh
   include/hpp/core/joint-bound-validation.hh
+  include/hpp/core/torque-bound-validation.hh
   include/hpp/core/equation.hh
   include/hpp/core/numerical-constraint.hh
   include/hpp/core/locked-joint.hh
@@ -91,20 +93,25 @@ SET(${PROJECT_NAME}_HEADERS
   include/hpp/core/path-validation-report.hh
   include/hpp/core/path-vector.hh
   include/hpp/core/reeds-shepp-path.hh
+  include/hpp/core/kinodynamic-path.hh
+  include/hpp/core/kinodynamic-oriented-path.hh
   include/hpp/core/plan-and-optimize.hh
   include/hpp/core/problem.hh
   include/hpp/core/problem-solver.hh
   include/hpp/core/prune.hh
   include/hpp/core/random-shortcut.hh
+  include/hpp/core/random-shortcut-oriented.hh
   include/hpp/core/roadmap.hh
   include/hpp/core/steering-method.hh
   include/hpp/core/steering-method-straight.hh
   include/hpp/core/steering-method/reeds-shepp.hh
+  include/hpp/core/steering-method/steering-kinodynamic.hh
   include/hpp/core/straight-path.hh
   include/hpp/core/interpolated-path.hh
   include/hpp/core/validation-report.hh
   include/hpp/core/visibility-prm-planner.hh
   include/hpp/core/weighed-distance.hh
+  include/hpp/core/kinodynamic-distance.hh
   include/hpp/core/path-projector/progressive.hh
   include/hpp/core/path-projector/dichotomy.hh
   include/hpp/core/path-projector/global.hh
@@ -123,7 +130,7 @@ ADD_REQUIRED_DEPENDENCY("hpp-constraints >= 3")
 ADD_REQUIRED_DEPENDENCY("hpp-model >= 3")
 
 ADD_SUBDIRECTORY(src)
-ADD_SUBDIRECTORY(tests)
+#ADD_SUBDIRECTORY(tests)
 
 # Add dependency toward hpp-core library in pkg-config file.
 PKG_CONFIG_APPEND_LIBS("hpp-core")

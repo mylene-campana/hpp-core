@@ -42,9 +42,13 @@
 #include <hpp/core/random-shortcut.hh>
 #include <hpp/core/steering-method-straight.hh>
 #include <hpp/core/steering-method/reeds-shepp.hh>
+#include <hpp/core/steering-method/steering-kinodynamic.hh>
 #include <hpp/core/visibility-prm-planner.hh>
 #include <hpp/core/weighed-distance.hh>
+#include <hpp/core/kinodynamic-distance.hh>
 #include <hpp/core/basic-configuration-shooter.hh>
+#include <hpp/core/dimt-rrt.hh>
+#include <hpp/core/random-shortcut-oriented.hh>
 
 namespace hpp {
   namespace core {
@@ -87,6 +91,7 @@ namespace hpp {
       pathPlannerType_ ("DiffusingPlanner"),
       initConf_ (), goalConfigurations_ (),
       configurationShooterType_ ("BasicConfigurationShooter"),
+      distanceType_("WeighedDistance"),
       steeringMethodType_ ("SteeringMethodStraight"),
       pathOptimizerTypes_ (), pathOptimizers_ (),
       pathValidationType_ ("Discretized"), pathValidationTolerance_ (0.02),
@@ -98,18 +103,24 @@ namespace hpp {
       add <PathPlannerBuilder_t> ("DiffusingPlanner",     DiffusingPlanner::createWithRoadmap);
       add <PathPlannerBuilder_t> ("VisibilityPrmPlanner", VisibilityPrmPlanner::createWithRoadmap);
       add <PathPlannerBuilder_t> ("BiRRTPlanner", BiRRTPlanner::createWithRoadmap);
+      add <PathPlannerBuilder_t> ("dimtRRT", DimtRRT::createWithRoadmap);
+
 
       add <ConfigurationShooterBuilder_t> ("BasicConfigurationShooter", BasicConfigurationShooter::create);
 
+      add <DistanceBuilder_t> ("WeighedDistance",WeighedDistance::create);
+      add <DistanceBuilder_t> ("KinodynamicDistance",KinodynamicDistance::create);
       add <SteeringMethodBuilder_t> ("SteeringMethodStraight", boost::bind(
             static_cast<SteeringMethodStraightPtr_t (*)(const ProblemPtr_t&)>
               (&SteeringMethodStraight::create), _1
             ));
       add <SteeringMethodBuilder_t> ("ReedsShepp", steeringMethod::ReedsShepp::createWithGuess);
+      add <SteeringMethodBuilder_t> ("Kinodynamic", steeringMethod::Kinodynamic::create);
 
       // Store path optimization methods in map.
       add <PathOptimizerBuilder_t> ("Prune",     Prune::create);
       add <PathOptimizerBuilder_t> ("RandomShortcut",     RandomShortcut::create);
+      add <PathOptimizerBuilder_t> ("RandomShortcutOriented",     RandomShortcutOriented::create);
       add <PathOptimizerBuilder_t> ("GradientBased",      pathOptimization::GradientBased::create);
       add <PathOptimizerBuilder_t> ("PartialShortcut",    pathOptimization::PartialShortcut::create);
       add <PathOptimizerBuilder_t> ("ConfigOptimization", pathOptimization::ConfigOptimization::create);
@@ -130,6 +141,15 @@ namespace hpp {
     ProblemSolver::~ProblemSolver ()
     {
       if (problem_) delete problem_;
+    }
+
+    void ProblemSolver::distanceType (const std::string& type)
+    {
+      if (!has <DistanceBuilder_t> (type)) {
+    throw std::runtime_error (std::string ("No distance method with name ") +
+                  type);
+      }
+      distanceType_ = type;
     }
 
     void ProblemSolver::steeringMethodType (const std::string& type)
@@ -415,6 +435,16 @@ namespace hpp {
       }
     }
 
+    void ProblemSolver::initDistance ()
+    {
+      if (!problem_) throw std::runtime_error ("The problem is not defined.");
+      DistancePtr_t dist (
+          get <DistanceBuilder_t> (distanceType_) (problem_->robot())
+          );
+      problem_->distance (dist);
+    }
+
+
     void ProblemSolver::initSteeringMethod ()
     {
       if (!problem_) throw std::runtime_error ("The problem is not defined.");
@@ -446,9 +476,14 @@ namespace hpp {
     {
       if (!problem_) throw std::runtime_error ("The problem is not defined.");
 
+
       // Set shooter
       problem_->configurationShooter
         (get <ConfigurationShooterBuilder_t> (configurationShooterType_) (robot_));
+      // set distance
+      initDistance();
+      // build roadmap with new distance
+      resetRoadmap();
       // Set steeringMethod
       initSteeringMethod ();
       PathPlannerBuilder_t createPlanner =
@@ -614,7 +649,17 @@ namespace hpp {
 	throw std::runtime_error ("No robot defined.");
       }
       JointPtr_t joint = robot_->getJointByName (jointName);
+      if (!joint) {
+	std::ostringstream oss;
+	oss << "Robot has no joint with name " << jointName << ".";
+	throw std::runtime_error (oss.str ().c_str ());
+      }
       const CollisionObjectPtr_t& object = obstacle (obstacleName);
+      if (!object)  {
+	std::ostringstream oss;
+	oss << "No obstacle with with name " << obstacleName << ".";
+	throw std::runtime_error (oss.str ().c_str ());
+      }
       problem ()->removeObstacleFromJoint (joint, object);
     }
 
