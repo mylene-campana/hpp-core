@@ -483,7 +483,7 @@ namespace hpp {
       // set distance
       initDistance();
       // build roadmap with new distance
-      resetRoadmap();
+      //resetRoadmap();
       // Set steeringMethod
       initSteeringMethod ();
       PathPlannerBuilder_t createPlanner =
