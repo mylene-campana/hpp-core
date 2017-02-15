@@ -37,6 +37,8 @@ namespace hpp {
     public:
       static BasicConfigurationShooterPtr_t create (const DevicePtr_t& robot)
       {
+	unsigned int seed = (unsigned int)(time(NULL));
+	//srand (seed);
 	BasicConfigurationShooter* ptr = new BasicConfigurationShooter (robot);
 	BasicConfigurationShooterPtr_t shPtr (ptr);
 	ptr->init (shPtr);

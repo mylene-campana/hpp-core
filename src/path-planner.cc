@@ -31,6 +31,8 @@
 #include <hpp/core/steering-method.hh>
 #include "astar.hh"
 
+# include <hpp/core/steering-method-straight.hh>
+
 namespace hpp {
   namespace core {
 
@@ -100,7 +102,7 @@ namespace hpp {
 	oneStep ();
 	oneStepCount++;
 	hppDout (info, "oneStepCount= " << oneStepCount);
-       solved = roadmap()->pathExists ();
+	solved = roadmap()->pathExists ();
 	if (interrupt_) throw std::runtime_error ("Interruption");
       }
       PathVectorPtr_t planned = PathVector::create (problem_.robot ()->configSize (), problem_.robot ()->numberDof ());
@@ -116,23 +118,38 @@ namespace hpp {
 	     itn != roadmap ()->goalNodes ().end (); ++itn) {
 	  ConfigurationPtr_t q1 ((initNode)->configuration ());
 	  ConfigurationPtr_t q2 ((*itn)->configuration ());
+	  hppDout (info, "before sm");
+	  if (!sm)
+	    throw std::runtime_error ("no steering-method in problem");
 	  path = (*sm) (*q1, *q2);
+	  hppDout (info, "before path projector");
 	  if (pathProjector) {
+	    hppDout (info, "try to project");
 	    if (!pathProjector->apply (path, projPath)) continue;
 	  } else {
-	    projPath = path;
+	    hppDout (info, "try NOT to project");
+	    if (path) {
+	      hppDout (info, "found steering-method path");
+	      projPath = path;
+	    }
+	    else {
+	      hppDout (info, "empty steering-method path");
+	      throw std::runtime_error ("empty steering-method path");
+	    }
 	  }
 	  if (projPath) {
+	    hppDout (info, "add edges");
             roadmap ()->addEdge (initNode, *itn, projPath);
 	    roadmap ()->addEdge (*itn, initNode, projPath->reverse ());
 	    planned->appendPath (projPath);
 	  } else { // constraints not applied, but still return directPath
 	    roadmap ()->addEdge (initNode, *itn, path);
 	    roadmap ()->addEdge (*itn, initNode, path->reverse ());
-	    planned->appendPath (path);
 	  }
+	  planned->appendPath (path);
 	}
       }
+      hppDout (info, "before finishSolve");
       return finishSolve (planned);
     }
 

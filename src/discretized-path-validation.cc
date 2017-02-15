@@ -111,7 +111,7 @@ namespace hpp {
 	    finished ++;
 	  }
 	}
-    hppDout(notice,"path validation, end");
+	//hppDout(notice,"path validation, end");
 	if (valid) {
 	  validPart = path;
 	  return true;
