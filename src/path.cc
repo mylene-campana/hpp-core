@@ -19,6 +19,7 @@
 #include "extracted-path.hh"
 
 #include <hpp/util/debug.hh>
+#include <hpp/model/configuration.hh>
 
 #include <hpp/core/config-projector.hh>
 
@@ -93,20 +94,25 @@ namespace hpp {
 
     void Path::checkPath () const
     {
+      hppDout (info, "In checkPath");
       if (constraints()) {
+	hppDout (info, "Path has constraints");
         if (!constraints()->isSatisfied (initial())) {
           hppDout (error, *constraints());
-          hppDout (error, initial().transpose ());
+          hppDout (error, model::displayConfig(initial()));
+	  hppDout (error, "Initial configuration of path does not satisfy the constraints");
           throw projection_error ("Initial configuration of path does not satisfy "
               "the constraints");
         }
         if (constraints() && !constraints()->isSatisfied (end())) {
           hppDout (error, *constraints());
-          hppDout (error, end().transpose ());
+          hppDout (error, model::displayConfig(end()));
+	  hppDout (error, "End configuration of path does not satisfy the constraints");
           throw projection_error ("End configuration of path does not satisfy "
               "the constraints");
         }
       }
+      hppDout (info, "Exiting checkPath");
     }
   } //   namespace core
 } // namespace hpp
