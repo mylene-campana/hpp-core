@@ -32,6 +32,7 @@
 #include "astar.hh"
 
 # include <hpp/core/steering-method-straight.hh>
+#include <iomanip> // for std::setprecision
 
 namespace hpp {
   namespace core {

@@ -41,12 +41,34 @@
 #include <hpp/constraints/generic-transformation.hh>
 #include "path-optimization/collision-constraints-result.hh"
 
+// For debug
+#include <hpp/core/problem-solver.hh>
+
+#define BILLION 1E9
+
 namespace hpp {
   namespace core {
     namespace pathOptimization {
       namespace {
         HPP_DEFINE_TIMECOUNTER(GBO_computeIterate);
         HPP_DEFINE_TIMECOUNTER(GBO_oneStep);
+      }
+
+      // Compute the length of a vector of paths assuming that each element
+      // is optimal for the given distance.
+      static value_type pathLength (const PathVectorPtr_t& path,
+				    const DistancePtr_t& distance)
+      {
+	value_type result = 0;
+	for (std::size_t i=0; i<path->numberPaths (); ++i) {
+	  const PathPtr_t& element (path->pathAtRank (i));
+	  const value_type& tmin (element->timeRange ().first);
+	  const value_type& tmax (element->timeRange ().second);
+	  Configuration_t q1 ((*element) (tmin));
+	  Configuration_t q2 ((*element) (tmax));
+	  result += (*distance) (q1, q2);
+	}
+	return result;
       }
 
       using model::displayConfig;
@@ -63,8 +85,8 @@ namespace hpp {
 	configSize_ (robot_->configSize ()), robotNumberDofs_
 	(robot_->numberDof ()),	robotNbNonLockedDofs_ (robot_->numberDof ()),
 	fSize_ (1),
-	initial_ (), end_ (), epsilon_ (1e-5), iterMax_ (30), alphaInit_ (0.25),
-	alphaMax_ (1.)
+	initial_ (), end_ (), epsilon_ (1e-3), iterMax_ (30),
+	alphaInit_ (problem.alphaInit_), alphaMax_ (1.)
       {
 	distance_ = HPP_DYNAMIC_PTR_CAST (WeighedDistance, problem.distance ());
 	if (!distance_) {
@@ -134,6 +156,8 @@ namespace hpp {
 	nbWaypoints_ = path->numberPaths () -1;
 	hppDout (info, "nbWaypoints_ = " << nbWaypoints_);
 	if (nbWaypoints_ == 0) return;
+	vector_t onesVector (path->numberPaths ());
+	for (int i = 0; i < onesVector.size (); i++) onesVector [i] = 1;
 	/* Create cost */
 	if (!cost_ || cost_->inputSize () !=
 	    nbWaypoints_ * path->outputSize () ||
@@ -142,6 +166,7 @@ namespace hpp {
 	  {
 	    hppDout (info, "creating cost");
 	    cost_ = PathLength::create (distance_, path);
+	    //cost_->setLambda (onesVector);
 	  }
 	hppDout (info, "size of x = " << cost_->inputSize ());
 	numberDofs_ = cost_->inputDerivativeSize ();
@@ -162,6 +187,7 @@ namespace hpp {
 	/* Store first and last way points */
 	initial_ = path->initial ();
 	end_ = path->end ();
+	alphaInit_ = problem ().alphaInit_;
 	alpha_ = alphaInit_;
       }
 
@@ -199,11 +225,13 @@ namespace hpp {
 	  hppDout (info, "rank(J) = " << rank);
 	  if (rank < J_.rows ()) {
 	    p_.setZero ();
+	    hppDout (error, "rank loss");
 	    return p_;
 	  }
 	  hppDout (info, "rhs_ - value_ = " << rhs_ - value_);
 	  p0_ = svd.solve (rhs_ - value_);
           const size_type nullity = numberDofs_ - rank; 
+	  hppDout (info, "nullity = " << nullity);
 	  if (nullity != 0) {
             const Jacobi_t::MatrixVType& V = svd.matrixV();
             // V0_ orthogonal base of Jf_ null space
@@ -213,10 +241,10 @@ namespace hpp {
             // gz_ = - V0_.transpose () * (rgrad_.transpose () + H_ * p0_);
             gz_ = - V.rightCols(nullity).transpose() * (rgrad_.transpose () + H_ * p0_);
 	    Jacobi_t svd2 (Hz_, Eigen::ComputeThinU | Eigen::ComputeFullV);
-	    rank = svd2.rank ();
+	    /*rank = svd2.rank ();
 	    hppDout (info, "Hz_ singular values = " <<
 		     svd2.singularValues ().transpose ());
-	    hppDout (info, "rank(Hz_) = " << rank);
+		     hppDout (info, "rank(Hz_) = " << rank);*/
 	    vector_t z (svd2.solve (gz_));
 	    hppDout (info, "Hz_ * z - gz_=" << (Hz_ * z - gz_).transpose ());
 	    // p_ = p0_ + V0_ * z;
@@ -228,12 +256,24 @@ namespace hpp {
 	  } else {
 	    p_ = p0_;
 	  }
+	  hppDout (info, "p_: " << p_.transpose ());
 	  return alpha_*p_;
 	}
       }
 
       typedef std::vector <std::pair <CollisionPathValidationReportPtr_t,
 				      std::size_t> > Reports_t;
+
+      // avoid adding the same collision twice in reports
+      // because the subpath 2 'begins' in the obstacle
+      static bool collisionRedundancy (const std::size_t& i1,
+				       const std::size_t& i2,
+				       const value_type& param1,
+				       const value_type& param2) {
+	if (i1 == i2 - 1 && param1 == 1. && param2 == 0.)
+	  return true;
+	return false;
+      }
 
       bool validatePath (const PathValidationPtr_t& pathValidation,
 			 const PathVectorPtr_t& path, Reports_t& reports)
@@ -242,13 +282,27 @@ namespace hpp {
 	PathPtr_t validPart;
 	PathValidationReportPtr_t report;
 	reports.clear ();
+	bool redundantColl = false;
 	for (std::size_t i=0; i<path->numberPaths (); ++i) {
 	  if (!pathValidation->validate
 	      (path->pathAtRank (i), false, validPart, report)) {
-	    HPP_STATIC_CAST_REF_CHECK (CollisionPathValidationReport, *report);
-	    reports.push_back
-	      (std::make_pair (HPP_STATIC_PTR_CAST
-			       (CollisionPathValidationReport, report), i));
+	    if (reports.size () != 0) {
+	      value_type tmpL = path->pathAtRank
+		(reports.back ().second)->length ();
+	      redundantColl =
+		collisionRedundancy (reports.back ().second, i,
+				     reports.back ().first->parameter/tmpL,
+				     report->parameter);
+	    }
+	    if (!redundantColl) {
+	      HPP_STATIC_CAST_REF_CHECK (CollisionPathValidationReport,
+					 *report);
+	      reports.push_back
+		(std::make_pair (HPP_STATIC_PTR_CAST
+				 (CollisionPathValidationReport, report), i));
+	    } else
+	      hppDout (info, "collision non added because already reported");
+	    redundantColl = false;
 	    valid = false;
 	  }
 	}
@@ -257,6 +311,14 @@ namespace hpp {
 
       PathVectorPtr_t GradientBased::optimize (const PathVectorPtr_t& path)
       {
+	problem ().timeValues_.clear ();
+	problem ().gainValues_.clear ();
+	struct timespec start, now, end;
+	clock_gettime(CLOCK_MONOTONIC, &start);
+	std::size_t iVec = 0; // index for timeValues and gainValues vectors
+	const value_type initialLength = pathLength (path,
+						     problem ().distance ());
+	value_type currentTime, currentLength, previousLength = initialLength;
 	interrupt_ = false;
 	initialize (path);
 	if (nbWaypoints_ == 0) // path is direct and optimal
@@ -267,30 +329,43 @@ namespace hpp {
 	ConstraintSetPtr_t constraints (problem ().constraints ());
 	Configuration_t qCollConstr, qCollConstr_old;
 	ConfigValidationsPtr_t configValtions (problem ().configValidations());
-	Reports_t reports;
+	Reports_t reports, newReports;
 	bool noCollision = true; // Assume there is no collision
+	bool compute_iterate = true;
 	/* Create initial path */
-	vector_t x1; x1.resize (cost_->inputSize ());
+	vector_t x1, s; x1.resize (cost_->inputSize ());
 	rowvector_t grad; grad.resize (cost_->inputDerivativeSize ());
 	pathToVector (path, x1);
 	vector_t x0 = x1;
+	vector_t x = x1;
 	Hinverse_ = H_.inverse ();
-	hppDout (info, "Hessian = " << H_);
+	//hppDout (info, "Hessian = " << H_);
+	//hppDout (info, "Hinverse_ = " << Hinverse_);
+	Jacobi_t svdHinv (Hinverse_, Eigen::ComputeThinU | Eigen::ComputeThinV);
+	hppDout (info, "Hinv rows: " << svdHinv.rows ());
+	hppDout (info, "Hinv rank: " << svdHinv.rank ());
 
 	/* Fill jacobian J_ and Jf_ with constraints FROM Problem */
 	cost_->jacobian (grad, x1);
+	hppDout (info, "init grad: " << grad);
 	compressVector (grad.transpose (), rgrad_.transpose ());
 	bool minimumReached = (rgrad_.squaredNorm () <= epsilon_);
+	bool isConstraintRedundant;
 
 	PathVectorPtr_t path0 (path);
 	CollisionConstraintsResults_t collisionConstraints;
-        updateProblemConstraints (x0);
+	updateProblemConstraints (x0);
         while (!(noCollision && minimumReached) && (!interrupt_)) {
           HPP_START_TIMECOUNTER(GBO_oneStep);
-          HPP_START_TIMECOUNTER(GBO_computeIterate);
-          vector_t s = computeIterate (x0);
-          HPP_STOP_TIMECOUNTER(GBO_computeIterate);
-          HPP_DISPLAY_TIMECOUNTER(GBO_computeIterate);
+	  if (compute_iterate) {
+	    HPP_START_TIMECOUNTER(GBO_computeIterate);
+	    s = computeIterate (x0);
+	    hppDout (info, "s: " << s.transpose ());
+	    HPP_STOP_TIMECOUNTER(GBO_computeIterate);
+	    HPP_DISPLAY_TIMECOUNTER(GBO_computeIterate);
+	  }
+	  else
+	    s = alpha_ * p_; // re-use optimal p_
           hppDout (info, "alpha_ = " << alpha_);
           value_type norm_s (s.norm ());
           minimumReached = (norm_s < epsilon_ || alpha_ == 1.);
@@ -327,8 +402,66 @@ namespace hpp {
                   if (configProjector)
                     ccr.add (configProjector->lockedJoints());
                 }
-                // Compute J_
+		// Linearize ccr around path0 and add it to J_
                 addCollisionConstraint (ccr, path0);
+
+		// check redundancy (rank loss in J_)
+		Jacobi_t svd (J_, Eigen::ComputeThinU | Eigen::ComputeFullV);
+		size_type rank = svd.rank();
+		hppDout (info, "Jrows = " << J_.rows ());
+		hppDout (info, "rank(J) = " << rank);
+		isConstraintRedundant = rank < J_.rows ();
+		
+		// Avoid redundancy solving
+		if (isConstraintRedundant) {
+		  hppDout(error, "redundant constraint");
+		  clock_gettime(CLOCK_MONOTONIC, &end);
+		  problem ().tGB_ = end.tv_sec - start.tv_sec +
+		    (end.tv_nsec - start.tv_nsec) / BILLION;
+		  hppDout(info, "tGB_: " << problem ().tGB_);
+		  return path0;
+		}
+
+		// Solve redundancy if necessary (finding a new constraint)
+		/*while (isConstraintRedundant) {
+		  hppDout (info, "redundancy found");
+		  J_.conservativeResize(J_.rows ()-1, J_.cols ());
+		  // execute step while halving alpha
+		  alpha_ *= 0.5;
+		  hppDout (info, "alpha_ = " << alpha_);
+		  integrate (x0, alpha_*p_, x);
+		  PathVectorPtr_t pathTmp =
+		    PathVector::create (configSize_, robotNumberDofs_);
+		  vectorToPath (x, pathTmp);
+		  // findNewConstraint with temporary path
+		  if (validatePath (pathValidation, pathTmp, newReports)) {
+		    // compute and linearize new constraint around temp. path
+		    hppDout (info, "temporary path collision-free");
+		    path0 = pathTmp;
+		    x0 = x;
+		    CollisionConstraintsResult ccr (robot_, path0, path1,
+						    *(reports.begin ()),
+						    J_.rows (),
+						    robotNbNonLockedDofs_);
+		  } else {
+		    // compute new constraint with temp. path collision
+		    hppDout (info, "intermediaite step in collision");
+		    path1 = pathTmp;
+		    CollisionConstraintsResult ccr (robot_, path0, path1,
+						    *(newReports.begin ()),
+						    J_.rows (),
+						    robotNbNonLockedDofs_);
+		  }
+		  addCollisionConstraint (ccr, path0);
+		  // check if new constraint solves redundancy
+		  Jacobi_t svd (J_, Eigen::ComputeThinU | Eigen::ComputeFullV);
+		  rank = svd.rank();
+		  isConstraintRedundant = rank < J_.rows ();
+		  hppDout (info, "Jrows = " << J_.rows ());
+		  hppDout (info, "rank(J) = " << rank);
+		}*/
+
+
                 collisionConstraints.push_back (ccr);
                 hppDout (info, "Number of collision constraints: "
                     << collisionConstraints.size ());
@@ -336,9 +469,11 @@ namespace hpp {
                 // constraint. If this latter minimum is in collision,
                 // re-initialize alpha_ to alphaInit_.
                 alpha_ = 1.;
+		compute_iterate = true;
               }
             } else {
               alpha_ = alphaInit_;
+	      compute_iterate = false;
             }
             noCollision = false;
           } else { // path valid
@@ -348,10 +483,32 @@ namespace hpp {
             cost_->jacobian (grad, x0);
             compressVector (grad.transpose (), rgrad_.transpose ());
             noCollision = true;
+	    compute_iterate = true;
           }
           HPP_STOP_TIMECOUNTER(GBO_oneStep);
           HPP_DISPLAY_TIMECOUNTER(GBO_oneStep);
+	  // gather result data
+	  clock_gettime(CLOCK_MONOTONIC, &now);
+	  currentTime = now.tv_sec - start.tv_sec +
+	    (now.tv_nsec - start.tv_nsec) / BILLION;
+	  hppDout (info, "currentTime= " << currentTime);
+	  currentLength = pathLength (path0, problem ().distance ());
+	  hppDout (info, "currentLength= " << currentLength);
+	  if (currentLength < previousLength) {
+	    problem ().timeValues_.resize (iVec+1);
+	    problem ().gainValues_.resize (iVec+1);
+	    problem ().timeValues_ [iVec] = currentTime;
+	    problem ().gainValues_ [iVec] = (initialLength -
+					     currentLength)/initialLength;
+	    iVec++;
+	  }
+	  previousLength = currentLength;
         } // while (!(noCollision && minimumReached) && (!interrupt_))
+	clock_gettime(CLOCK_MONOTONIC, &end);
+	const value_type endTime = end.tv_sec - start.tv_sec +
+	  (end.tv_nsec - start.tv_nsec) / BILLION;
+	problem ().tGB_ = endTime;
+	hppDout(info, "tGB_: " << endTime);
 	return path0;
       }
 
@@ -478,7 +635,7 @@ namespace hpp {
 					   Eigen::ComputeThinV);
 	  svd.setThreshold (1e-3);
 	  vector_t dx = svd.solve(rhs_ - value_);
-	  hppDout (info, "rhs_ - value = " << (rhs_ - value_).transpose ());
+	  //hppDout (info, "rhs_ - value = " << (rhs_ - value_).transpose ());
 	  vector_t x1 (x);
 	  integrate (x1, dx, x);
 	  path = PathVector::create (configSize_, robotNumberDofs_);

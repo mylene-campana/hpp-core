@@ -52,7 +52,7 @@ namespace hpp {
     (const PathPtr_t& path, bool reverse, PathPtr_t& validPart,
      PathValidationReportPtr_t& validationReport)
     {
-        hppDout(notice,"path validation, reverse : "<<reverse);
+      //hppDout(notice,"path validation, reverse : "<<reverse);
       ValidationReportPtr_t configReport;
       assert (path);
       bool valid = true;

@@ -25,8 +25,11 @@
 #include <hpp/core/path-validation.hh>
 #include <hpp/core/path-vector.hh>
 #include <hpp/core/problem.hh>
+#include <hpp/core/problem-solver.hh>
 #include <hpp/core/random-shortcut.hh>
 #include <hpp/core/path-projector.hh>
+
+#define BILLION 1E9
 
 namespace hpp {
   namespace core {
@@ -64,6 +67,11 @@ namespace hpp {
 
     PathVectorPtr_t RandomShortcut::optimize (const PathVectorPtr_t& path)
     {
+      //srand (time (NULL));
+      problem ().timeValues_.clear ();
+      problem ().gainValues_.clear ();
+      struct timespec start, now;
+      clock_gettime(CLOCK_MONOTONIC, &start);
       using std::numeric_limits;
       using std::make_pair;
       bool finished = false;
@@ -71,13 +79,17 @@ namespace hpp {
       const Configuration_t q0 = path->initial ();
       const Configuration_t q3 = path->end ();
       PathVectorPtr_t tmpPath = path;
+      const value_type initialLength = PathLength<>::run (path, problem ().distance ());
+      value_type currentTime, currentLength, previousLength = initialLength;
+      std::size_t iVec = 0; // index for timeValues and gainValues vectors
 
       // Maximal number of iterations without improvements
       const std::size_t n = problem().getParameter<std::size_t>("PathOptimizersNumberOfLoops", 5);
       std::size_t projectionError = n;
       std::deque <value_type> length (n-1,
 				      numeric_limits <value_type>::infinity ());
-      length.push_back (PathLength<>::run (tmpPath, problem ().distance ()));
+      length.push_back (initialLength);
+      const value_type tGB = problem ().tGB_;
       PathVectorPtr_t result;
       Configuration_t q1 (path->outputSize ()),
                       q2 (path->outputSize ());
@@ -85,8 +97,8 @@ namespace hpp {
       while (!finished && projectionError != 0) {
         t0 = tmpPath->timeRange ().first;
         t3 = tmpPath->timeRange ().second;
-  value_type u2 = t0 + (t3 -t0) * rand ()/RAND_MAX;
-  value_type u1 = t0 + (t3 -t0) * rand ()/RAND_MAX;
+	value_type u2 = t0 + (t3 -t0) * rand ()/RAND_MAX;
+	value_type u1 = t0 + (t3 -t0) * rand ()/RAND_MAX;
 	value_type t1, t2;
 	if (u1 < u2) {t1 = u1; t2 = u2;} else {t1 = u2; t2 = u1;}
 	if (!(*tmpPath) (q1, t1)) {
@@ -150,9 +162,29 @@ namespace hpp {
           result = tmpPath;
           continue;
         }
-	length.push_back (PathLength<>::run (result, problem ().distance ()));
+	currentLength = PathLength<>::run (result, problem ().distance ());
+	length.push_back (currentLength);
 	length.pop_front ();
-	finished = (length [0] - length [n-1]) <= 1e-4 * length[n-1];
+
+	// choose the termination condition
+	hppDout (info, "tGB= " << tGB);
+	if (tGB > 0) {
+	  clock_gettime(CLOCK_MONOTONIC, &now);
+	  currentTime = now.tv_sec - start.tv_sec +
+	    (now.tv_nsec - start.tv_nsec) / BILLION;
+	  if (currentLength < previousLength) {
+	    problem ().timeValues_.resize (iVec+1);
+	    problem ().gainValues_.resize (iVec+1);
+	    problem ().timeValues_ [iVec] = currentTime;
+	    problem ().gainValues_ [iVec] = (initialLength -
+					     currentLength)/initialLength;
+	    iVec++;
+	  }
+	  previousLength = currentLength;
+	  finished = currentTime > tGB;
+	} else { // classic termination condition
+	  finished = (length [0] - length [n-1]) <= 1e-4 * length[n-1]; 
+	}
 	hppDout (info, "length = " << length [n-1]);
 	tmpPath = result;
       }

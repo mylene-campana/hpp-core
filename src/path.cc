@@ -49,7 +49,7 @@ namespace hpp {
     // Copy constructor
     Path::Path (const Path& path) :
       timeRange_ (path.timeRange_), outputSize_ (path.outputSize_),
-      constraints_ ()
+      outputDerivativeSize_ (path.outputDerivativeSize_), constraints_ ()
     {
       if (path.constraints_) {
 	constraints_ = HPP_STATIC_PTR_CAST (ConstraintSet,
@@ -59,6 +59,7 @@ namespace hpp {
 
     Path::Path (const Path& path, const ConstraintSetPtr_t& constraints) :
       timeRange_ (path.timeRange_), outputSize_ (path.outputSize_),
+      outputDerivativeSize_ (path.outputDerivativeSize_),
       constraints_ (constraints)
     {
       assert (!path.constraints_);
@@ -94,7 +95,7 @@ namespace hpp {
 
     void Path::checkPath () const
     {
-      hppDout (info, "In checkPath");
+      //hppDout (info, "In checkPath");
       if (constraints()) {
 	hppDout (info, "Path has constraints");
         if (!constraints()->isSatisfied (initial())) {
@@ -112,7 +113,7 @@ namespace hpp {
               "the constraints");
         }
       }
-      hppDout (info, "Exiting checkPath");
+      //hppDout (info, "Exiting checkPath");
     }
   } //   namespace core
 } // namespace hpp

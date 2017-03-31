@@ -19,6 +19,7 @@
 #include <boost/bind.hpp>
 
 #include <hpp/util/debug.hh>
+#include <hpp/model/configuration.hh>
 #include <hpp/model/collision-object.hh>
 #include <hpp/model/configuration.hh>
 #include <hpp/constraints/differentiable-function.hh>
@@ -105,8 +106,8 @@ namespace hpp {
       add <PathPlannerBuilder_t> ("BiRRTPlanner", BiRRTPlanner::createWithRoadmap);
       add <PathPlannerBuilder_t> ("dimtRRT", DimtRRT::createWithRoadmap);
 
-
-      add <ConfigurationShooterBuilder_t> ("BasicConfigurationShooter", BasicConfigurationShooter::create);
+      add <ConfigurationShooterBuilder_t> ("BasicConfigurationShooter",
+					   BasicConfigurationShooter::create);
 
       add <DistanceBuilder_t> ("WeighedDistance",WeighedDistance::create);
       add <DistanceBuilder_t> ("KinodynamicDistance",KinodynamicDistance::create);
@@ -128,14 +129,21 @@ namespace hpp {
 
       // Store path validation methods in map.
       add <PathValidationBuilder_t> ("Discretized", DiscretizedCollisionChecking::create);
-      add <PathValidationBuilder_t> ("Progressive", continuousCollisionChecking::Progressive::create);
-      add <PathValidationBuilder_t> ("Dichotomy",   continuousCollisionChecking::Dichotomy::create);
+      add <PathValidationBuilder_t> ("Progressive",
+				     continuousCollisionChecking::Progressive::create);
+      add <PathValidationBuilder_t> ("Dichotomy",
+				     continuousCollisionChecking::Dichotomy::create);
 
       // Store path projector methods in map.
-      add <PathProjectorBuilder_t> ("None",        NonePathProjector::create);
+      add <PathProjectorBuilder_t> ("None",
+				    NonePathProjector::create);
       add <PathProjectorBuilder_t> ("Progressive", pathProjector::Progressive::create);
-      add <PathProjectorBuilder_t> ("Dichotomy",   pathProjector::Dichotomy::create);
-      add <PathProjectorBuilder_t> ("Global",      pathProjector::Global::create);
+      add <PathProjectorBuilder_t> ("Dichotomy",
+				    pathProjector::Dichotomy::create);
+      add <PathProjectorBuilder_t> ("Global",
+				    pathProjector::Global::create);
+      //srand(5000);
+      //srand(time(NULL));
     }
 
     ProblemSolver::~ProblemSolver ()
@@ -155,8 +163,8 @@ namespace hpp {
     void ProblemSolver::steeringMethodType (const std::string& type)
     {
       if (!has <SteeringMethodBuilder_t> (type)) {
-	throw std::runtime_error (std::string ("No steering method with name ") +
-				  type);
+	throw std::runtime_error
+	  (std::string ("No steering method with name ") + type);
       }
       steeringMethodType_ = type;
     }
@@ -173,8 +181,8 @@ namespace hpp {
     void ProblemSolver::configurationShooterType (const std::string& type)
     {
       if (!has <ConfigurationShooterBuilder_t> (type)) {
-    throw std::runtime_error (std::string ("No configuration shooter with name ") +
-                  type);
+    throw std::runtime_error
+      (std::string ("No configuration shooter with name ") + type);
       }
       configurationShooterType_ = type;
     }
@@ -251,6 +259,8 @@ namespace hpp {
 
     void ProblemSolver::initConfig (const ConfigurationPtr_t& config)
     {
+      //normalize (robot_, *config);
+      //hppDout (info, "normalized init config: " << (*config).transpose ());
       initConf_ = config;
     }
 
@@ -261,6 +271,8 @@ namespace hpp {
 
     void ProblemSolver::addGoalConfig (const ConfigurationPtr_t& config)
     {
+      //normalize (robot_, *config);
+      //hppDout (info, "normalized goal config: " << (*config).transpose ());
       goalConfigurations_.push_back (config);
     }
 

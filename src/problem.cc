@@ -49,10 +49,13 @@ namespace hpp {
       pathValidation_ (),
       collisionObstacles_ (), constraints_ (),
       configurationShooter_(BasicConfigurationShooter::create (robot)),
+      tGB_ (0), alphaInit_ (0.2),
       plannerIterLimit_ (500000)
     {
       configValidations_->add (CollisionValidation::create (robot));
       configValidations_->add (JointBoundValidation::create (robot));
+timeValues_.reserve (500);
+ gainValues_.reserve (500);
       parabolaResults_.reserve (4);
       parabolaResults_.resize (4);
       memset(&parabolaResults_[0], 0,

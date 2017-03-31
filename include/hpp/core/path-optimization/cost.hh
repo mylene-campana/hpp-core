@@ -37,6 +37,9 @@ namespace hpp {
 	/// \retval hessian Hessian matrix of right size
 	virtual void hessian (matrixOut_t hessian) const = 0;
 
+	/// Set lambda weights for weighted cost.
+	virtual void setLambda (const vector_t& lambda) const = 0;
+
       protected:
 	Cost (size_type inputSize, size_type inputDerivativeSize,
 	      const std::string& name) :
