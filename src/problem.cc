@@ -49,7 +49,7 @@ namespace hpp {
       pathValidation_ (),
       collisionObstacles_ (), constraints_ (),
       configurationShooter_(BasicConfigurationShooter::create (robot)),
-      tGB_ (0), alphaInit_ (0.2),
+      tGB_ (0), alphaInit_ (0.2), nbPathPlannerFails_ (0),
       plannerIterLimit_ (500000)
     {
       configValidations_->add (CollisionValidation::create (robot));

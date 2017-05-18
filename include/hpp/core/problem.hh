@@ -315,6 +315,8 @@ namespace hpp {
       mutable std::vector<value_type> gainValues_;
       /// To set initial value of Gradient-Based optimizer
       mutable value_type alphaInit_;
+      /// number of fail for path-planner to generate a path after plannerIterLimit number of iterations
+      mutable std::size_t nbPathPlannerFails_;
 
     private :
       /// The robot

@@ -110,6 +110,7 @@ namespace hpp {
       if (oneStepCount < plannerIterLimit)
 	planned = computePath ();
       else { // return directPath (even if invalid)
+	problem_.nbPathPlannerFails_++;
 	hppDout (info, "add (maybe invalid) directPath");
 	const SteeringMethodPtr_t& sm (problem ().steeringMethod ());
 	PathProjectorPtr_t pathProjector (problem ().pathProjector ());
